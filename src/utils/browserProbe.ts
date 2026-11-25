@@ -15,7 +15,7 @@ interface NavigatorExtended extends Navigator {
   }>;
 }
 
-function detectWebGlInfo(): {
+export function detectWebGlInfo(): {
   renderer: string;
   vendor: string;
   webgl2Supported: boolean;
@@ -138,7 +138,7 @@ function measureDisplayCadence(): Promise<{
   });
 }
 
-function measureEventLoopLag(): Promise<number> {
+export function measureEventLoopLag(): Promise<number> {
   return new Promise((resolve) => {
     if (typeof MessageChannel === 'undefined') {
       resolve(0.2);
