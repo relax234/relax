@@ -1,0 +1,62 @@
+name: Build Windows EXE & Auto-Updater
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install web dependencies & build bundle
+        run: |
+          npm ci
+          npm run build
+
+      - name: Install Electron dependencies
+        run: npm --prefix electron install
+
+      - name: Configure GitHub auto-updater repository metadata
+        shell: pwsh
+        run: |
+          $repoParts = "${{ github.repository }}".Split("/")
+          $cfg = Get-Content "electron/electron-builder.json" -Raw | ConvertFrom-Json
+          $cfg.publish = @(@{
+            provider = "github"
+            owner = $repoParts[0]
+            repo = $repoParts[1]
+          })
+          $cfg | ConvertTo-Json -Depth 6 | Set-Content "electron/electron-builder.json" -Encoding UTF8
+
+      - name: Build Windows Installer (.exe) & Portable (.exe)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          node electron/prepare-dist.mjs
+          if ("${{ github.ref }}".StartsWith("refs/tags/v")) {
+            npx --prefix electron electron-builder --win --x64 --publish always --config electron/electron-builder.json
+          } else {
+            npx --prefix electron electron-builder --win --x64 --publish never --config electron/electron-builder.json
+          }
+
+      - name: Upload built EXE artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: OptiCore-Windows-EXE
+          path: |
+            release/*.exe
+            release/latest.yml

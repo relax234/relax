@@ -5,9 +5,11 @@ import { ScannerSection } from './components/ScannerSection';
 import { CompareSection } from './components/CompareSection';
 import { ChecklistSection } from './components/ChecklistSection';
 import { ScriptGeneratorSection } from './components/ScriptGeneratorSection';
-import { GpuTipsSection } from './components/GpuTipsSection';
+import { GpuTipsSection, type PlatformTab } from './components/GpuTipsSection';
 import { FaqSection } from './components/FaqSection';
 import { Footer } from './components/Footer';
+import { SnowBackground } from './components/SnowBackground';
+import { UpdateAppModal } from './components/UpdateAppModal';
 import { runBrowserHardwareProbe } from './utils/browserProbe';
 import {
   OPT_MODULE_TO_FLAGS,
@@ -27,6 +29,7 @@ const STORAGE_KEYS = {
   scan: 'opticore_my_scan',
   winReport: 'opticore_win_report',
   friend: 'opticore_friend_pc',
+  snow: 'opticore_snow_enabled',
 } as const;
 
 function readStorageJson<T>(key: string, fallback: T): T {
@@ -100,6 +103,13 @@ export default function App() {
 
   const [selectedModules, setSelectedModules] = useState<Record<string, boolean>>(getDefaultModules);
   const [format, setFormat] = useState<ScriptFormat>('bat');
+  const [snowEnabled, setSnowEnabled] = useState<boolean>(() =>
+    readStorageJson<boolean>(STORAGE_KEYS.snow, true),
+  );
+  const [stressRunning, setStressRunning] = useState(false);
+  const [generatorImportCount, setGeneratorImportCount] = useState<number | null>(null);
+  const [tipsTab, setTipsTab] = useState<PlatformTab>('all');
+  const [updateModalOpen, setUpdateModalOpen] = useState(false);
 
   // Auto-scroll to #compare when opening a shared friend link (?pc=...)
   useEffect(() => {
@@ -167,6 +177,14 @@ export default function App() {
       // Ignore storage errors
     }
   }, [friendSnapshot]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.snow, JSON.stringify(snowEnabled));
+    } catch {
+      // Ignore storage errors
+    }
+  }, [snowEnabled]);
 
   const handleRunScan = useCallback(async () => {
     if (scanning) return;
@@ -293,6 +311,8 @@ export default function App() {
       }
       return next;
     });
+    setGeneratorImportCount(moduleIds.length);
+    window.setTimeout(() => setGeneratorImportCount(null), 3500);
     const el = document.getElementById('generator');
     if (el) {
       el.scrollIntoView({ behavior: 'smooth' });
@@ -307,6 +327,8 @@ export default function App() {
       }
       return next;
     });
+    setGeneratorImportCount(moduleIds.length);
+    window.setTimeout(() => setGeneratorImportCount(null), 3500);
     const el = document.getElementById('generator');
     if (el) {
       el.scrollIntoView({ behavior: 'smooth' });
@@ -336,10 +358,19 @@ export default function App() {
   }, [myName, scanData, windowsReport, checkedItems, appliedExtraFlags]);
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Navbar />
-      <main className="flex-1">
-        <HeroSection />
+    <div className="min-h-screen flex flex-col relative">
+      <SnowBackground enabled={snowEnabled} paused={stressRunning || scanning || updateModalOpen} />
+      <Navbar
+        onOpenCmdGuide={() => setTipsTab('cmd')}
+        onOpenUpdates={() => setUpdateModalOpen(true)}
+      />
+      <main className="flex-1 relative z-20">
+        <HeroSection
+          snowEnabled={snowEnabled}
+          onToggleSnow={() => setSnowEnabled((s) => !s)}
+          onStressStateChange={setStressRunning}
+          onAddModulesToGenerator={handleAddSingleRecModules}
+        />
         <ScannerSection
           scanData={scanData}
           scanning={scanning}
@@ -373,15 +404,22 @@ export default function App() {
         <ScriptGeneratorSection
           selectedModules={selectedModules}
           format={format}
+          importedCount={generatorImportCount}
           onToggleModule={handleToggleModule}
           onSelectPreset={handleSelectPresetModules}
           onFormatChange={setFormat}
           onMarkApplied={handleMarkGeneratorApplied}
         />
-        <GpuTipsSection />
+        <GpuTipsSection activeTab={tipsTab} onTabChange={setTipsTab} />
         <FaqSection />
       </main>
-      <Footer />
+      <Footer
+        snowEnabled={snowEnabled}
+        onToggleSnow={() => setSnowEnabled((s) => !s)}
+        onOpenCmdGuide={() => setTipsTab('cmd')}
+        onOpenUpdates={() => setUpdateModalOpen(true)}
+      />
+      <UpdateAppModal open={updateModalOpen} onClose={() => setUpdateModalOpen(false)} />
     </div>
   );
 }

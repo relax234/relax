@@ -17,6 +17,7 @@ test('computeStressSummary reports high stability when stress deltas stay near 6
   assert.ok(summary.stabilityPercent >= 95);
   assert.equal(summary.verdictTone, 'good');
   assert.equal(summary.cpuWorkersUsed, 8);
+  assert.ok(summary.antiFreezeTips.some((t) => t.id === 'freeze-ok'));
 });
 
 test('computeStressSummary catches severe frame drops and stutters under load', () => {
@@ -49,4 +50,6 @@ test('computeStressSummary catches severe frame drops and stutters under load', 
   assert.ok(summary.worstFrameMs >= 55);
   assert.ok(summary.stabilityPercent < 65);
   assert.equal(summary.verdictTone, 'bad');
+  assert.ok(summary.antiFreezeTips.some((t) => t.id === 'freeze-cpu-power'));
+  assert.ok(summary.antiFreezeTips.some((t) => t.id === 'freeze-overlays-cache'));
 });

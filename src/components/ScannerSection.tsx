@@ -57,15 +57,15 @@ function getScoreAccent(score: number, windowsVerified: boolean): {
 } {
   if (!windowsVerified) {
     return {
-      text: 'text-zinc-200',
-      stroke: '#a1a1aa',
+      text: 'text-slate-200',
+      stroke: '#94a3b8',
       labelClass: 'text-amber-300',
     };
   }
   if (score >= 82) {
     return {
       text: 'text-white',
-      stroke: '#fafafa',
+      stroke: '#fcd34d',
       labelClass: 'text-emerald-300',
     };
   }
@@ -92,20 +92,20 @@ function getPriorityStyle(priority: RecommendationPriority): {
     return {
       label: 'Критичная ошибка',
       textClass: 'text-rose-300',
-      cardBorder: 'border-rose-500/35 bg-rose-950/15',
+      cardBorder: 'border-rose-400/35 bg-rose-950/20',
     };
   }
   if (priority === 'medium') {
     return {
       label: 'Требует настройки',
       textClass: 'text-amber-300',
-      cardBorder: 'border-amber-500/30 bg-[#111113]',
+      cardBorder: 'border-amber-300/30 winter-card',
     };
   }
   return {
     label: 'В норме',
     textClass: 'text-emerald-300',
-    cardBorder: 'border-zinc-800 bg-[#111113]',
+    cardBorder: 'border-sky-200/12 winter-card',
   };
 }
 
@@ -132,7 +132,7 @@ function FrameCadenceSparkline({ deltas }: { deltas: number[] }) {
     >
       <polyline
         fill="none"
-        stroke="#fafafa"
+        stroke="#fcd34d"
         strokeWidth="1.5"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -140,6 +140,33 @@ function FrameCadenceSparkline({ deltas }: { deltas: number[] }) {
       />
     </svg>
   );
+}
+
+function buildImmediateScanFromReport(report: WindowsDiagReport): HardwareScanInput {
+  const hz = report.windowsDisplayHz || 60;
+  const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
+  const screenWidth =
+    typeof window !== 'undefined' ? Math.round((window.screen.width || 1920) * dpr) : 1920;
+  const screenHeight =
+    typeof window !== 'undefined' ? Math.round((window.screen.height || 1080) * dpr) : 1080;
+
+  return {
+    cpuCores:
+      report.cpuThreads ||
+      (typeof navigator !== 'undefined' ? navigator.hardwareConcurrency || 4 : 4),
+    deviceMemoryGb: report.ramTotalGb ?? null,
+    gpuRenderer: report.gpuName || 'Видеокарта (из отчёта Windows)',
+    gpuVendorRaw: report.gpuName || '',
+    screenWidth,
+    screenHeight,
+    measuredHz: hz,
+    avgFrameMs: Number((1000 / Math.max(30, hz)).toFixed(1)),
+    frameJitterMs: 0.4,
+    osName: report.osCaption || 'Windows 10 / 11',
+    isWindows: true,
+    connectionRttMs: null,
+    windowsReport: report,
+  };
 }
 
 export function ScannerSection({
@@ -164,7 +191,11 @@ export function ScannerSection({
   const [appliedNotice, setAppliedNotice] = useState(false);
   const [addedRecId, setAddedRecId] = useState<string | null>(null);
 
-  const evaluation = scanData ? evaluatePcScan({ ...scanData, windowsReport }) : null;
+  const effectiveScanData =
+    scanData ?? (windowsReport ? buildImmediateScanFromReport(windowsReport) : null);
+  const evaluation = effectiveScanData
+    ? evaluatePcScan({ ...effectiveScanData, windowsReport })
+    : null;
 
   const handleStartScan = async () => {
     if (scanning) return;
@@ -192,7 +223,7 @@ export function ScannerSection({
     URL.revokeObjectURL(url);
   };
 
-  const applyParsedReport = async (report: WindowsDiagReport, shouldScroll: boolean) => {
+  const applyParsedReport = (report: WindowsDiagReport, shouldScroll: boolean) => {
     setReportError(null);
     setRecFilter('all');
     onWindowsReportChange(report);
@@ -204,7 +235,7 @@ export function ScannerSection({
     }
 
     if (!scanData && !scanning) {
-      await onStartScan();
+      void onStartScan();
     }
 
     if (shouldScroll) {
@@ -230,14 +261,14 @@ export function ScannerSection({
     }
   };
 
-  const handleAnalyzeReport = async () => {
+  const handleAnalyzeReport = () => {
     const parsed = parseWindowsDiagReport(rawReport);
     if (!parsed.ok) {
       setReportError(parsed.error);
       return;
     }
 
-    await applyParsedReport(parsed.report, true);
+    applyParsedReport(parsed.report, true);
   };
 
   const handleClearReport = () => {
@@ -265,24 +296,26 @@ export function ScannerSection({
   };
 
   const ramSummary = (() => {
-    if (!scanData) return '';
+    if (!effectiveScanData) return '';
     if (windowsReport?.ramTotalGb) {
       const speedPart = windowsReport.ramSpeedMhz ? ` · ${windowsReport.ramSpeedMhz} МГц` : '';
+      const freePart =
+        windowsReport.ramFreeGb !== undefined ? ` · своб. ${windowsReport.ramFreeGb} ГБ` : '';
       const channelPart =
         windowsReport.ramStickCount === 1
-          ? ' · 1 планка (одноканал!)'
+          ? ' · 1 пл. (одноканал!)'
           : windowsReport.ramStickCount && windowsReport.ramStickCount >= 2
-            ? ` · ${windowsReport.ramStickCount} планки`
+            ? ` · ${windowsReport.ramStickCount} пл.`
             : '';
-      return `${windowsReport.ramTotalGb} ГБ ОЗУ${speedPart}${channelPart} · ${scanData.cpuCores} пот.`;
+      return `${windowsReport.ramTotalGb} ГБ ОЗУ${speedPart}${channelPart}${freePart}`;
     }
-    if (scanData.deviceMemoryGb === 8) {
-      return `≥ 8 ГБ ОЗУ (лимит браузера) · ${scanData.cpuCores} пот.`;
+    if (effectiveScanData.deviceMemoryGb === 8) {
+      return `≥ 8 ГБ ОЗУ (лимит браузера) · ${effectiveScanData.cpuCores} пот.`;
     }
-    if (scanData.deviceMemoryGb !== null) {
-      return `~${scanData.deviceMemoryGb} ГБ ОЗУ · ${scanData.cpuCores} пот.`;
+    if (effectiveScanData.deviceMemoryGb !== null) {
+      return `~${effectiveScanData.deviceMemoryGb} ГБ ОЗУ · ${effectiveScanData.cpuCores} пот.`;
     }
-    return `Объём ОЗУ скрыт браузером · ${scanData.cpuCores} пот.`;
+    return `Объём ОЗУ скрыт браузером · ${effectiveScanData.cpuCores} пот.`;
   })();
 
   const scoreAccent = evaluation
@@ -317,20 +350,20 @@ export function ScannerSection({
   return (
     <section
       id="scanner"
-      className="py-9 sm:py-11 px-4 sm:px-6 border-t border-zinc-800/80 bg-zinc-950/50"
+      className="py-9 sm:py-11 px-4 sm:px-6 border-t border-sky-200/10 bg-[#080d19]/55"
     >
       <div className="max-w-6xl mx-auto">
         <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 mb-6">
           <div>
-            <div className="text-xs font-mono text-zinc-400 tracking-wide">
-              01 · Честная диагностика ПК и Windows
+            <div className="text-xs font-mono text-amber-200/90 tracking-wide">
+              01 · Честная диагностика ПК, BIOS и Windows
             </div>
             <h2 className="text-2xl sm:text-3xl font-bold mt-1 text-white">
               Сканер системы и реальный аудит ОС
             </h2>
-            <p className="text-zinc-400 text-sm mt-1 max-w-2xl">
-              Браузер проверяет GPU, CPU, герцовку и фреймтайм, а PowerShell-скрипт считывает
-              настоящие параметры Windows и находит ошибки оптимизации.
+            <p className="text-slate-300 text-sm mt-1 max-w-2xl">
+              Браузер нагружает GPU шейдерами и замеряет фреймтайм, а PowerShell-скрипт считывает
+              параметры BIOS/UEFI, ReBAR, XMP, SMART-диска, Windows и сети (40+ проверок).
             </p>
           </div>
 
@@ -339,7 +372,7 @@ export function ScannerSection({
               type="button"
               onClick={handleStartScan}
               disabled={scanning}
-              className="px-5 py-2.5 rounded-xl bg-white hover:bg-zinc-200 disabled:opacity-60 text-zinc-950 font-bold text-sm glow-btn inline-flex items-center gap-2 whitespace-nowrap cursor-pointer"
+              className="px-5 py-2.5 rounded-xl bg-amber-300 hover:bg-amber-200 disabled:opacity-60 text-slate-950 font-bold text-sm glow-btn inline-flex items-center gap-2 whitespace-nowrap cursor-pointer"
             >
               {scanData ? <RotateCcw className="w-4 h-4" /> : <Play className="w-4 h-4" />}
               {scanning
@@ -353,19 +386,19 @@ export function ScannerSection({
 
         {/* Scanning Progress Bar */}
         {scanning && (
-          <div className="mb-5 p-4 rounded-2xl bg-[#111113] border border-zinc-700">
+          <div className="mb-5 p-4 rounded-2xl winter-card border border-amber-300/25">
             <div className="flex items-center justify-between gap-4 mb-2">
               <div className="flex items-center gap-2 text-sm font-semibold text-white">
-                <Activity className="w-4 h-4" />
-                <span>{statusText || 'Анализ системы...'}</span>
+                <Activity className="w-4 h-4 text-amber-300" />
+                <span>{statusText || 'Анализ системы и нагрузка GPU...'}</span>
               </div>
-              <span className="text-sm font-mono font-bold text-white tabular-nums">
+              <span className="text-sm font-mono font-bold text-amber-200 tabular-nums">
                 {progress}%
               </span>
             </div>
-            <div className="h-1.5 w-full rounded-md bg-zinc-800 overflow-hidden">
+            <div className="h-1.5 w-full rounded-md bg-slate-800 overflow-hidden">
               <div
-                className="h-full bg-white transition-all duration-300"
+                className="h-full bg-amber-300 transition-all duration-300"
                 style={{ width: `${progress}%` }}
               />
             </div>
@@ -373,21 +406,21 @@ export function ScannerSection({
         )}
 
         {/* Empty Prompt State before first scan */}
-        {!scanData && !scanning && (
-          <div className="p-5 sm:p-6 rounded-2xl bg-[#111113] border border-zinc-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        {!effectiveScanData && !scanning && (
+          <div className="p-5 sm:p-6 rounded-2xl winter-card border flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <div className="space-y-1 max-w-2xl">
               <div className="text-base font-bold text-white">
-                Начни с теста браузера или сразу вставь отчёт PowerShell ниже
+                Начни с теста GPU/браузера или сразу вставь отчёт PowerShell ниже
               </div>
-              <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed">
-                Для точного процента оптимизации Windows запусти безопасный read-only скрипт ниже —
-                он сразу покажет ошибки реестра, XMP, HAGS, питания и подскажет, что исправить.
+              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                Для точного процента оптимизации Windows, BIOS/UEFI, ReBAR и сети запусти безопасный
+                read-only скрипт ниже — он покажет реальные узкие места и соберёт скрипт исправлений.
               </p>
             </div>
             <button
               type="button"
               onClick={handleStartScan}
-              className="px-4 py-2.5 rounded-xl bg-zinc-900 hover:bg-white hover:text-zinc-950 border border-zinc-700 text-zinc-100 font-semibold text-sm transition shrink-0 cursor-pointer inline-flex items-center gap-2 whitespace-nowrap"
+              className="px-4 py-2.5 rounded-xl bg-slate-900/80 hover:bg-amber-300 hover:text-slate-950 border border-sky-200/20 text-slate-100 font-semibold text-sm transition shrink-0 cursor-pointer inline-flex items-center gap-2 whitespace-nowrap"
             >
               <Gauge className="w-4 h-4" />
               Запустить тест
@@ -396,10 +429,10 @@ export function ScannerSection({
         )}
 
         {/* Results Dashboard */}
-        {scanData && evaluation && scoreAccent && (
-          <div id="scan-results" className="space-y-4">
+        {effectiveScanData && evaluation && scoreAccent && (
+          <div id="scan-results" className="space-y-4 animate-fade-up">
             {/* Overall Readiness Verdict Card */}
-            <div className="p-5 rounded-2xl bg-[#111113] border border-zinc-800">
+            <div className="p-5 rounded-2xl winter-card border">
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
                   {/* Circular Score Ring */}
@@ -410,7 +443,7 @@ export function ScannerSection({
                         cy="50"
                         r={ringRadius}
                         fill="none"
-                        stroke="rgba(63, 63, 70, 0.55)"
+                        stroke="rgba(148, 163, 184, 0.25)"
                         strokeWidth="7"
                       />
                       <circle
@@ -435,7 +468,7 @@ export function ScannerSection({
                           ? `${evaluation.optimizationScore}%`
                           : `${evaluation.hardwareScore}/100`}
                       </span>
-                      <span className="text-[10px] font-mono text-zinc-400">
+                      <span className="text-[10px] font-mono text-slate-400">
                         {evaluation.windowsVerified ? 'оптимизация' : 'база ПК'}
                       </span>
                     </div>
@@ -446,18 +479,18 @@ export function ScannerSection({
                       <span className={`font-semibold ${scoreAccent.labelClass}`}>
                         {evaluation.verdictBadge}
                       </span>
-                      <span className="text-zinc-600" aria-hidden="true">
+                      <span className="text-slate-600" aria-hidden="true">
                         ·
                       </span>
-                      <span className="text-zinc-300">
+                      <span className="text-slate-300">
                         Потенциал: {evaluation.estimatedFpsGain}
                       </span>
-                      <span className="text-zinc-600" aria-hidden="true">
+                      <span className="text-slate-600" aria-hidden="true">
                         ·
                       </span>
                       <span
                         data-testid="scanner-checks-count"
-                        className="text-zinc-400 tabular-nums"
+                        className="text-slate-400 tabular-nums"
                       >
                         Проверено: {evaluation.checksCount} параметров
                       </span>
@@ -465,7 +498,7 @@ export function ScannerSection({
                     <h3 className="text-lg sm:text-xl font-bold text-white">
                       {evaluation.verdictTitle}
                     </h3>
-                    <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed">
+                    <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
                       {evaluation.verdictDescription}
                     </p>
                   </div>
@@ -476,7 +509,7 @@ export function ScannerSection({
                     <button
                       type="button"
                       onClick={handleApplyToGenerator}
-                      className="px-4 py-2.5 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 font-bold text-sm glow-btn inline-flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer"
+                      className="px-4 py-2.5 rounded-xl bg-amber-300 hover:bg-amber-200 text-slate-950 font-bold text-sm glow-btn inline-flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer"
                     >
                       <span>Подобрать скрипт под ПК</span>
                       <ArrowRight className="w-4 h-4 shrink-0" />
@@ -485,14 +518,14 @@ export function ScannerSection({
                     <button
                       type="button"
                       onClick={scrollToWindowsDiag}
-                      className="px-4 py-2.5 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 font-bold text-sm glow-btn inline-flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer"
+                      className="px-4 py-2.5 rounded-xl bg-amber-300 hover:bg-amber-200 text-slate-950 font-bold text-sm glow-btn inline-flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer"
                     >
                       <Terminal className="w-4 h-4 shrink-0" />
-                      <span>Проверить Windows (PowerShell)</span>
+                      <span>Проверить Windows и BIOS</span>
                     </button>
                   )}
 
-                  <div className="flex flex-wrap items-center justify-center sm:justify-end gap-2.5 text-xs text-zinc-400">
+                  <div className="flex flex-wrap items-center justify-center sm:justify-end gap-2.5 text-xs text-slate-400">
                     {appliedNotice ? (
                       <span className="text-emerald-300 font-medium">
                         Модули отмечены в генераторе ниже ✓
@@ -502,22 +535,22 @@ export function ScannerSection({
                         Рекомендовано модулей: {evaluation.recommendedModuleIds.length}
                       </span>
                     )}
-                    <span className="text-zinc-700" aria-hidden="true">
+                    <span className="text-slate-600" aria-hidden="true">
                       ·
                     </span>
                     <button
                       type="button"
                       onClick={handleApplyToGenerator}
-                      className="text-zinc-200 hover:text-white underline-offset-4 hover:underline cursor-pointer whitespace-nowrap"
+                      className="text-amber-200 hover:text-amber-100 underline-offset-4 hover:underline cursor-pointer whitespace-nowrap"
                     >
                       В скрипт →
                     </button>
-                    <span className="text-zinc-700" aria-hidden="true">
+                    <span className="text-slate-600" aria-hidden="true">
                       ·
                     </span>
                     <a
                       href="#compare"
-                      className="text-zinc-300 hover:text-white font-medium whitespace-nowrap"
+                      className="text-slate-300 hover:text-white font-medium whitespace-nowrap"
                     >
                       Сравнить ↓
                     </a>
@@ -528,72 +561,132 @@ export function ScannerSection({
 
             {/* Detected Telemetry Grid */}
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              <div className="min-w-0 p-3.5 rounded-xl bg-[#111113] border border-zinc-800">
-                <div className="flex items-center gap-2 text-xs font-mono text-zinc-400 mb-1">
-                  <Monitor className="w-3.5 h-3.5 text-zinc-200" />
+              <div className="min-w-0 p-3.5 rounded-xl winter-card border">
+                <div className="flex items-center gap-2 text-xs font-mono text-amber-200/80 mb-1">
+                  <Monitor className="w-3.5 h-3.5 text-amber-300" />
                   <span>Видеокарта (GPU)</span>
                 </div>
                 <div
                   className="text-sm font-semibold text-white truncate"
-                  title={windowsReport?.gpuName || scanData.gpuRenderer}
+                  title={windowsReport?.gpuName || effectiveScanData.gpuRenderer}
                 >
-                  {windowsReport?.gpuName || scanData.gpuRenderer}
+                  {windowsReport?.gpuName || effectiveScanData.gpuRenderer}
                 </div>
-                <div className="text-xs text-zinc-400 mt-0.5">{evaluation.gpuInfo.label}</div>
-                {scanData.maxTextureSize && (
-                  <div className="text-[11px] font-mono text-zinc-500 mt-0.5 tabular-nums">
-                    {scanData.webgl2Supported ? 'WebGL2' : 'WebGL1'} · {scanData.maxTextureSize}px
+                <div className="text-xs text-slate-300 mt-0.5">
+                  {evaluation.gpuInfo.label}
+                  {windowsReport?.gpuVramGb ? ` · ${windowsReport.gpuVramGb} ГБ VRAM` : ''}
+                  {windowsReport?.rebarEnabled === true
+                    ? ' · ReBAR ВКЛ'
+                    : windowsReport?.rebarEnabled === false
+                      ? ' · ReBAR ВЫКЛ'
+                      : ''}
+                </div>
+                {windowsReport?.gpuDriverVersion ? (
+                  <div className="text-[11px] font-mono text-slate-400 mt-0.5 tabular-nums truncate">
+                    Драйвер {windowsReport.gpuDriverVersion}
+                    {windowsReport.gpuDriverAgeDays !== undefined
+                      ? ` (${windowsReport.gpuDriverAgeDays} дн.)`
+                      : ''}
                   </div>
+                ) : (
+                  effectiveScanData.maxTextureSize && (
+                    <div className="text-[11px] font-mono text-slate-400 mt-0.5 tabular-nums">
+                      {effectiveScanData.webgl2Supported ? 'WebGL2' : 'WebGL1'} ·{' '}
+                      {effectiveScanData.maxTextureSize}px
+                    </div>
+                  )
                 )}
               </div>
 
-              <div className="min-w-0 p-3.5 rounded-xl bg-[#111113] border border-zinc-800">
-                <div className="flex items-center gap-2 text-xs font-mono text-zinc-400 mb-1">
-                  <Cpu className="w-3.5 h-3.5 text-zinc-200" />
+              <div className="min-w-0 p-3.5 rounded-xl winter-card border">
+                <div className="flex items-center gap-2 text-xs font-mono text-amber-200/80 mb-1">
+                  <Cpu className="w-3.5 h-3.5 text-amber-300" />
                   <span>Процессор и ОЗУ</span>
                 </div>
                 <div
                   className="text-sm font-semibold text-white truncate"
-                  title={windowsReport?.cpuName || `${scanData.cpuCores} логических потоков`}
+                  title={
+                    windowsReport?.cpuName || `${effectiveScanData.cpuCores} логических потоков`
+                  }
                 >
-                  {windowsReport?.cpuName || `${scanData.cpuCores} логических потоков`}
+                  {windowsReport?.cpuName || `${effectiveScanData.cpuCores} логических потоков`}
                 </div>
-                <div className="text-xs text-zinc-400 mt-0.5">{ramSummary}</div>
-              </div>
-
-              <div className="min-w-0 p-3.5 rounded-xl bg-[#111113] border border-zinc-800">
-                <div className="flex items-center gap-2 text-xs font-mono text-zinc-400 mb-1">
-                  <Gauge className="w-3.5 h-3.5 text-zinc-200" />
-                  <span>Экран и фреймтайм</span>
-                </div>
-                <div className="text-sm font-semibold text-white font-mono tabular-nums">
-                  {scanData.screenWidth}×{scanData.screenHeight} · {scanData.measuredHz} Гц
-                </div>
-                <div className="text-xs text-zinc-400 mt-0.5 font-mono tabular-nums">
-                  Кадр {scanData.avgFrameMs} мс · джиттер {scanData.frameJitterMs} мс
-                  {scanData.eventLoopLagMs !== undefined && scanData.eventLoopLagMs !== null
-                    ? ` · поток ${scanData.eventLoopLagMs} мс`
-                    : ''}
-                </div>
-                {scanData.frameDeltas && scanData.frameDeltas.length > 2 && (
-                  <FrameCadenceSparkline deltas={scanData.frameDeltas} />
+                <div className="text-xs text-slate-300 mt-0.5">{ramSummary}</div>
+                {windowsReport && (
+                  <div className="text-[11px] font-mono text-slate-400 mt-0.5 tabular-nums truncate">
+                    {windowsReport.cpuThreads ?? effectiveScanData.cpuCores} пот.
+                    {windowsReport.ramRatedMhz && windowsReport.ramSpeedMhz
+                      ? ` · SPD ${windowsReport.ramRatedMhz}`
+                      : ''}
+                    {windowsReport.cpuLoadPercent !== undefined
+                      ? ` · фон ${windowsReport.cpuLoadPercent}%`
+                      : ''}
+                    {windowsReport.topRamApp
+                      ? ` · ${windowsReport.topRamApp}: ${windowsReport.topRamMb ?? '?'}МБ`
+                      : ''}
+                  </div>
                 )}
               </div>
 
-              <div className="min-w-0 p-3.5 rounded-xl bg-[#111113] border border-zinc-800">
-                <div className="flex items-center gap-2 text-xs font-mono text-zinc-400 mb-1">
-                  <Activity className="w-3.5 h-3.5 text-zinc-200" />
-                  <span>ОС и система</span>
+              <div className="min-w-0 p-3.5 rounded-xl winter-card border">
+                <div className="flex items-center gap-2 text-xs font-mono text-amber-200/80 mb-1">
+                  <Gauge className="w-3.5 h-3.5 text-amber-300" />
+                  <span>Экран и тест GPU</span>
                 </div>
-                <div className="text-sm font-semibold text-white truncate">{scanData.osName}</div>
-                <div className="text-xs text-zinc-400 mt-0.5 leading-relaxed">
+                <div className="text-sm font-semibold text-white font-mono tabular-nums">
+                  {effectiveScanData.screenWidth}×{effectiveScanData.screenHeight} ·{' '}
+                  {windowsReport?.windowsDisplayHz ?? effectiveScanData.measuredHz} Гц
+                  {windowsReport?.windowsMaxHz &&
+                  windowsReport.windowsDisplayHz &&
+                  windowsReport.windowsMaxHz > windowsReport.windowsDisplayHz + 5
+                    ? ` (макс ${windowsReport.windowsMaxHz})`
+                    : ''}
+                </div>
+                <div className="text-xs text-slate-300 mt-0.5 font-mono tabular-nums">
+                  {effectiveScanData.gpuStressFps
+                    ? `GPU тест: ${effectiveScanData.gpuStressFps} FPS · джиттер ${effectiveScanData.gpuStressJitterMs ?? effectiveScanData.frameJitterMs}мс${
+                        effectiveScanData.gpuStressDrops
+                          ? ` · ${effectiveScanData.gpuStressDrops} спадов`
+                          : ''
+                      }`
+                    : `Кадр ${effectiveScanData.avgFrameMs} мс · джиттер ${effectiveScanData.frameJitterMs} мс`}
+                </div>
+                {effectiveScanData.frameDeltas && effectiveScanData.frameDeltas.length > 2 && (
+                  <FrameCadenceSparkline deltas={effectiveScanData.frameDeltas} />
+                )}
+              </div>
+
+              <div className="min-w-0 p-3.5 rounded-xl winter-card border">
+                <div className="flex items-center gap-2 text-xs font-mono text-amber-200/80 mb-1">
+                  <Activity className="w-3.5 h-3.5 text-amber-300" />
+                  <span>ОС, BIOS и диски</span>
+                </div>
+                <div
+                  className="text-sm font-semibold text-white truncate"
+                  title={
+                    windowsReport?.moboName
+                      ? `${windowsReport.moboName} (${windowsReport.bootMode || 'UEFI'})`
+                      : windowsReport?.osCaption || effectiveScanData.osName
+                  }
+                >
+                  {windowsReport?.moboName
+                    ? `${windowsReport.moboName}`
+                    : windowsReport?.osCaption || effectiveScanData.osName}
+                </div>
+                <div className="text-xs text-slate-300 mt-0.5 leading-relaxed">
                   {windowsReport
-                    ? `Питание: ${POWER_PLAN_LABELS[windowsReport.powerPlan || ''] || windowsReport.powerPlan || '—'} · HAGS: ${windowsReport.hagsEnabled ? 'Вкл' : 'Выкл'} · C: ${windowsReport.ssdFreePercent ?? '?'}%`
-                    : scanData.onBattery
-                      ? `От батареи (${scanData.batteryLevelPercent ?? '?'}%) — лимит мощности`
-                      : scanData.connectionRttMs !== null
-                        ? `Задержка сети ~${scanData.connectionRttMs} мс · Реестр не проверен`
-                        : 'Реестр Windows ещё не проверен'}
+                    ? `${windowsReport.bootMode || 'UEFI'}${
+                        windowsReport.biosVersion ? ` · BIOS ${windowsReport.biosVersion}` : ''
+                      } · ${POWER_PLAN_LABELS[windowsReport.powerPlan || ''] || windowsReport.powerPlan || '—'} · C: ${windowsReport.systemDriveBus || windowsReport.systemDriveType || 'Диск'} (${windowsReport.ssdFreePercent ?? '?'}%)${
+                        windowsReport.tcpRscEnabled !== undefined
+                          ? ` · RSC ${windowsReport.tcpRscEnabled ? 'Вкл' : 'Выкл'}`
+                          : ''
+                      }`
+                    : effectiveScanData.onBattery
+                      ? `От батареи (${effectiveScanData.batteryLevelPercent ?? '?'}%) — лимит мощности`
+                      : effectiveScanData.connectionRttMs !== null
+                        ? `Задержка сети ~${effectiveScanData.connectionRttMs} мс · Реестр и BIOS не проверены`
+                        : 'Реестр Windows и BIOS ещё не проверены'}
                 </div>
               </div>
             </div>
@@ -602,19 +695,19 @@ export function ScannerSection({
             {evaluation.windowsVerified && evaluation.verifiedChecks.length > 0 && (
               <div
                 data-testid="verified-windows-checks"
-                className="p-4 sm:p-5 rounded-2xl bg-[#111113] border border-zinc-800 space-y-3"
+                className="p-4 sm:p-5 rounded-2xl winter-card border space-y-3"
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <h3 className="text-sm sm:text-base font-bold text-white">
-                      Реальные параметры Windows по отчёту
+                      Реальные параметры Windows, BIOS/UEFI и сети по отчёту
                     </h3>
-                    <p className="text-xs text-zinc-400">
+                    <p className="text-xs text-slate-300">
                       Проверено {evaluation.verifiedChecks.length} параметров: {passedChecksCount} в
                       норме, {failedChecksCount} требуют настройки.
                     </p>
                   </div>
-                  <span className="text-xs font-mono text-zinc-200 tabular-nums">
+                  <span className="text-xs font-mono text-amber-200 tabular-nums">
                     Оптимизация ОС: {evaluation.optimizationScore}%
                   </span>
                 </div>
@@ -625,12 +718,12 @@ export function ScannerSection({
                       key={check.id}
                       className={`p-2.5 rounded-xl border text-xs ${
                         check.passed
-                          ? 'bg-zinc-950/80 border-zinc-800'
-                          : 'bg-rose-950/20 border-rose-500/35'
+                          ? 'bg-[#070b14]/85 border-sky-200/12'
+                          : 'bg-rose-950/25 border-rose-400/35'
                       }`}
                     >
                       <div className="flex items-center justify-between gap-1.5 mb-0.5">
-                        <span className="text-zinc-400 truncate">{check.label}</span>
+                        <span className="text-slate-300 truncate">{check.label}</span>
                         {check.passed ? (
                           <CheckCircle2 className="w-3.5 h-3.5 text-emerald-300 shrink-0" />
                         ) : (
@@ -639,7 +732,7 @@ export function ScannerSection({
                       </div>
                       <div
                         className={`font-mono font-semibold truncate ${
-                          check.passed ? 'text-zinc-100' : 'text-rose-200'
+                          check.passed ? 'text-slate-100' : 'text-rose-200'
                         }`}
                         title={check.valueText}
                       >
@@ -655,14 +748,14 @@ export function ScannerSection({
             <div className="space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                 <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-                  <Wrench className="w-4 h-4 text-zinc-200" />
+                  <Wrench className="w-4 h-4 text-amber-300" />
                   <span>Что нужно сделать и какие ошибки найдены</span>
                 </h3>
 
                 <div
                   role="tablist"
                   aria-label="Фильтр рекомендаций"
-                  className="inline-flex flex-wrap items-center gap-1 p-1 rounded-lg bg-[#111113] border border-zinc-800"
+                  className="inline-flex flex-wrap items-center gap-1 p-1 rounded-lg winter-card border"
                 >
                   {(
                     [
@@ -680,8 +773,8 @@ export function ScannerSection({
                       onClick={() => setRecFilter(tab.id)}
                       className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors whitespace-nowrap cursor-pointer ${
                         recFilter === tab.id
-                          ? 'bg-white text-zinc-950 font-semibold'
-                          : 'text-zinc-400 hover:text-white'
+                          ? 'bg-amber-300 text-slate-950 font-semibold'
+                          : 'text-slate-300 hover:text-white'
                       }`}
                     >
                       {tab.label}
@@ -691,7 +784,7 @@ export function ScannerSection({
               </div>
 
               {filteredRecommendations.length === 0 ? (
-                <div className="p-4 rounded-xl bg-[#111113] border border-zinc-800 text-sm text-zinc-400">
+                <div className="p-4 rounded-xl winter-card border text-sm text-slate-300">
                   В этой категории нет пунктов — переключитесь на вкладку «Все».
                 </div>
               ) : (
@@ -715,17 +808,17 @@ export function ScannerSection({
                               )}
                               {style.label}
                             </span>
-                            <span className="text-zinc-300 tabular-nums">{rec.fpsImpact}</span>
+                            <span className="text-slate-300 tabular-nums">{rec.fpsImpact}</span>
                           </div>
                           <h4 className="text-sm sm:text-base font-bold text-white mb-1">
                             {rec.title}
                           </h4>
-                          <p className="text-xs text-zinc-400 leading-relaxed">{rec.reason}</p>
+                          <p className="text-xs text-slate-300 leading-relaxed">{rec.reason}</p>
                         </div>
 
-                        <div className="pt-2.5 border-t border-zinc-800/80 flex flex-wrap items-end justify-between gap-2.5 text-xs text-zinc-200 leading-relaxed">
+                        <div className="pt-2.5 border-t border-sky-200/12 flex flex-wrap items-end justify-between gap-2.5 text-xs text-slate-200 leading-relaxed">
                           <div className="min-w-0 flex-1">
-                            <span className="text-white font-semibold">Что сделать: </span>
+                            <span className="text-amber-200 font-semibold">Что сделать: </span>
                             {rec.action}
                           </div>
                           {rec.moduleIds.length > 0 && onAddModules && (
@@ -736,7 +829,7 @@ export function ScannerSection({
                                 onAddModules(rec.moduleIds);
                                 window.setTimeout(() => setAddedRecId(null), 2000);
                               }}
-                              className="px-2.5 py-1 rounded-md bg-zinc-900 border border-zinc-700 hover:bg-white hover:text-zinc-950 text-zinc-200 font-mono text-[11px] font-semibold transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+                              className="px-2.5 py-1 rounded-md bg-slate-900 border border-sky-200/20 hover:bg-amber-300 hover:text-slate-950 text-slate-100 font-mono text-[11px] font-semibold transition-colors whitespace-nowrap shrink-0 cursor-pointer"
                             >
                               {addedRecId === rec.id ? 'Добавлено ✓' : 'В скрипт →'}
                             </button>
@@ -751,68 +844,68 @@ export function ScannerSection({
           </div>
         )}
 
-        {/* Honest Deep Windows PowerShell Diagnostic */}
+        {/* Honest Deep Windows, BIOS & Network PowerShell Diagnostic */}
         <div
           id="windows-diag-panel"
-          className="mt-5 rounded-2xl bg-[#111113] border border-zinc-800 overflow-hidden"
+          className="mt-5 rounded-2xl winter-card border overflow-hidden"
         >
           <button
             type="button"
             onClick={() => setDeepOpen((prev) => !prev)}
             aria-expanded={deepOpen}
-            className="w-full px-4 sm:px-5 py-3.5 flex items-center justify-between gap-4 text-left hover:bg-zinc-900/50 transition cursor-pointer"
+            className="w-full px-4 sm:px-5 py-3.5 flex items-center justify-between gap-4 text-left hover:bg-slate-900/50 transition cursor-pointer"
           >
             <div className="flex items-start sm:items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-zinc-900 border border-zinc-700 flex items-center justify-center shrink-0">
-                <Terminal className="w-4 h-4 text-white" />
+              <div className="w-8 h-8 rounded-lg bg-amber-300/15 border border-amber-300/35 flex items-center justify-center shrink-0">
+                <Terminal className="w-4 h-4 text-amber-300" />
               </div>
               <div>
                 <div className="text-sm font-bold text-white flex flex-wrap items-center gap-2">
-                  <span>Глубокая проверка Windows (PowerShell)</span>
-                  <span className="text-xs font-mono font-normal text-zinc-400">
-                    XMP · ОЗУ · HAGS · Power Throttling · VBS · Реестр · Temp
+                  <span>Глубокая проверка Windows, BIOS и сети (PowerShell · 40+ параметров)</span>
+                  <span className="text-xs font-mono font-normal text-amber-200/80">
+                    BIOS/UEFI · ReBAR · XMP · VRAM · Драйвер · SMART · Сеть (RSC/QoS)
                   </span>
                 </div>
-                <div className="text-xs text-zinc-400 mt-0.5">
-                  Скрипт только читает настройки за 5 секунд, копирует строку{' '}
-                  <code className="text-zinc-200 font-mono">OPTICORE:{'{...}'}</code> и сразу
-                  показывает реальный % и ошибки Windows.
+                <div className="text-xs text-slate-300 mt-0.5">
+                  Только чтение за 5 секунд: сканирует вплоть до версии BIOS, режима UEFI/Legacy,
+                  ReBAR, NVMe/SMART, конфликтных твиков (MPO/BCD), сети и копирует{' '}
+                  <code className="text-amber-200 font-mono">OPTICORE:{'{...}'}</code>.
                 </div>
               </div>
             </div>
             <ChevronDown
-              className={`w-5 h-5 text-zinc-400 shrink-0 transition-transform duration-200 ${
+              className={`w-5 h-5 text-slate-400 shrink-0 transition-transform duration-200 ${
                 deepOpen ? 'rotate-180' : ''
               }`}
             />
           </button>
 
           {deepOpen && (
-            <div className="px-4 sm:px-5 pb-4 pt-3 border-t border-zinc-800 space-y-3">
+            <div className="px-4 sm:px-5 pb-4 pt-3 border-t border-sky-200/12 space-y-3">
               <div className="grid lg:grid-cols-2 gap-4 items-start">
                 <div className="min-w-0 space-y-2.5">
-                  <div className="text-xs font-mono text-zinc-300">
+                  <div className="text-xs font-mono text-slate-300">
                     1. Скопируй код в PowerShell или скачай read-only файл:
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <button
                       type="button"
                       onClick={handleCopyDiagScript}
-                      className="px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-700 hover:bg-zinc-800 text-xs font-medium text-zinc-100 transition inline-flex items-center gap-1.5 cursor-pointer"
+                      className="px-3 py-1.5 rounded-lg bg-slate-900 border border-sky-200/20 hover:bg-slate-800 text-xs font-medium text-slate-100 transition inline-flex items-center gap-1.5 cursor-pointer"
                     >
-                      <Copy className="w-3.5 h-3.5" />
+                      <Copy className="w-3.5 h-3.5 text-amber-300" />
                       {diagCopied ? 'Скрипт скопирован ✓' : 'Копировать PowerShell-скрипт'}
                     </button>
                     <button
                       type="button"
                       onClick={handleDownloadDiagScript}
-                      className="px-3 py-1.5 rounded-lg bg-white hover:bg-zinc-200 text-xs font-semibold text-zinc-950 transition inline-flex items-center gap-1.5 cursor-pointer"
+                      className="px-3 py-1.5 rounded-lg bg-amber-300 hover:bg-amber-200 text-xs font-semibold text-slate-950 transition inline-flex items-center gap-1.5 cursor-pointer"
                     >
                       <Download className="w-3.5 h-3.5" />
                       Скачать OptiCore_Diag.ps1
                     </button>
                   </div>
-                  <pre className="p-3 rounded-xl bg-zinc-950 border border-zinc-800 text-[11px] font-mono text-zinc-300 overflow-x-auto max-h-36 leading-relaxed">
+                  <pre className="p-3 rounded-xl bg-[#070b14] border border-sky-200/15 text-[11px] font-mono text-slate-300 overflow-x-auto max-h-36 leading-relaxed">
                     <code>{WINDOWS_DIAG_SCRIPT}</code>
                   </pre>
                 </div>
@@ -820,10 +913,10 @@ export function ScannerSection({
                 <div className="min-w-0 space-y-2.5">
                   <label
                     htmlFor="windows-diag-input"
-                    className="block text-xs font-mono text-zinc-300"
+                    className="block text-xs font-mono text-slate-300"
                   >
                     2. Вставь строку результата{' '}
-                    <code className="text-white">OPTICORE:{'{...}'}</code> сюда (разберётся
+                    <code className="text-amber-200">OPTICORE:{'{...}'}</code> сюда (разберётся
                     автоматически):
                   </label>
                   <textarea
@@ -831,14 +924,14 @@ export function ScannerSection({
                     value={rawReport}
                     onChange={(e) => handleRawReportChange(e.target.value)}
                     rows={4}
-                    placeholder='OPTICORE:{"cpuName":"AMD Ryzen 5 5600X","gpuName":"NVIDIA GeForce RTX 3060","ramTotalGb":16,"ramSpeedMhz":3200,"ramStickCount":2,"powerPlan":"balanced","gameDvrEnabled":true,"hagsEnabled":false,"mouseAccelEnabled":true,"vbsEnabled":false,"ssdFreePercent":24,"tempSizeMb":640,"startupCount":8}'
-                    className="w-full p-3 rounded-xl bg-zinc-950 border border-zinc-700 focus:border-white focus:outline-none text-xs font-mono text-zinc-100 placeholder:text-zinc-600"
+                    placeholder='OPTICORE:{"cpuName":"AMD Ryzen 5 5600X","moboName":"MSI B550-A PRO","biosVersion":"A.E0","bootMode":"UEFI","rebarEnabled":true,"gpuName":"NVIDIA GeForce RTX 3060","ramTotalGb":16,"ramSpeedMhz":3200,"ramRatedMhz":3200,"ramStickCount":2,"powerPlan":"balanced","tcpRscEnabled":true,"qosReservedPercent":20}'
+                    className="w-full p-3 rounded-xl bg-[#070b14] border border-sky-200/20 focus:border-amber-300 focus:outline-none text-xs font-mono text-slate-100 placeholder:text-slate-600"
                   />
 
                   {reportError && (
                     <div
                       role="alert"
-                      className="p-2.5 rounded-lg bg-rose-500/15 border border-rose-500/35 text-xs text-rose-200"
+                      className="p-2.5 rounded-lg bg-rose-500/15 border border-rose-400/35 text-xs text-rose-200"
                     >
                       {reportError}
                     </div>
@@ -847,16 +940,16 @@ export function ScannerSection({
                   {windowsReport && evaluation && evaluation.windowsVerified && !reportError && (
                     <div
                       data-testid="diag-parsed-banner"
-                      className="p-2.5 rounded-lg bg-zinc-950 border border-zinc-700 flex flex-wrap items-center justify-between gap-2 text-xs"
+                      className="p-2.5 rounded-lg bg-[#070b14] border border-emerald-400/30 flex flex-wrap items-center justify-between gap-2 text-xs"
                     >
-                      <span className="text-zinc-200 font-mono">
-                        Отчёт разобран: оптимизация Windows{' '}
-                        <strong className="text-white">{evaluation.optimizationScore}%</strong> ·{' '}
-                        проблем: {failedChecksCount}
+                      <span className="text-slate-200 font-mono">
+                        Отчёт разобран: оптимизация ОС{' '}
+                        <strong className="text-amber-200">{evaluation.optimizationScore}%</strong>{' '}
+                        · проблем: {failedChecksCount}
                       </span>
                       <a
                         href="#scan-results"
-                        className="text-white hover:underline inline-flex items-center gap-1 font-medium whitespace-nowrap"
+                        className="text-amber-200 hover:underline inline-flex items-center gap-1 font-medium whitespace-nowrap"
                       >
                         <ArrowUp className="w-3.5 h-3.5" />
                         <span>К ошибкам</span>
@@ -868,7 +961,7 @@ export function ScannerSection({
                     <button
                       type="button"
                       onClick={handleAnalyzeReport}
-                      className="px-4 py-2 rounded-lg bg-white hover:bg-zinc-200 text-zinc-950 font-bold text-xs transition cursor-pointer"
+                      className="px-4 py-2 rounded-lg bg-amber-300 hover:bg-amber-200 text-slate-950 font-bold text-xs transition cursor-pointer"
                     >
                       Проанализировать отчёт
                     </button>
@@ -876,7 +969,7 @@ export function ScannerSection({
                       <button
                         type="button"
                         onClick={handleClearReport}
-                        className="px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 hover:bg-zinc-800 text-zinc-300 text-xs transition inline-flex items-center gap-1 cursor-pointer"
+                        className="px-3 py-2 rounded-lg bg-slate-900 border border-sky-200/20 hover:bg-slate-800 text-slate-300 text-xs transition inline-flex items-center gap-1 cursor-pointer"
                       >
                         <X className="w-3.5 h-3.5" />
                         Сбросить отчёт

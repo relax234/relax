@@ -2,18 +2,110 @@ import { computeFrameMetrics } from './frameMonitor';
 
 export type StressIntensity = 'medium' | 'extreme';
 
+export interface StressAntiFreezeTip {
+  id: string;
+  severity: 'high' | 'medium' | 'ok';
+  title: string;
+  reason: string;
+  action: string;
+  moduleIds: string[];
+}
+
 export interface StressBenchmarkSummary {
   intensity: StressIntensity;
   durationSec: number;
   avgFps: number;
   onePercentLowFps: number;
   worstFrameMs: number;
+  jitterMs: number;
   dropCount: number;
   stabilityPercent: number;
   cpuWorkersUsed: number;
   gpuWorkloadLabel: string;
   verdict: string;
   verdictTone: 'good' | 'warn' | 'bad';
+  antiFreezeTips: StressAntiFreezeTip[];
+}
+
+export function buildStressAntiFreezeTips(params: {
+  avgFps: number;
+  onePercentLowFps: number;
+  worstFrameMs: number;
+  jitterMs: number;
+  targetFrameMs: number;
+  dropCount: number;
+  stabilityPercent: number;
+  gpuWorkloadLabel: string;
+  isSoftwareRenderer?: boolean;
+}): StressAntiFreezeTip[] {
+  const tips: StressAntiFreezeTip[] = [];
+  const isSoftware =
+    params.isSoftwareRenderer ||
+    /canvas|swiftshader|llvmpipe|192×192/i.test(params.gpuWorkloadLabel);
+
+  if (isSoftware) {
+    tips.push({
+      id: 'gpu-hw-accel',
+      severity: 'high',
+      title: 'Тест шёл без аппаратного ускорения видеокарты',
+      reason: 'В браузере активен программный рендер (SwiftShader / 2D) — из-за этого любая 3D-нагрузка грузит CPU.',
+      action: 'Включите «Аппаратное ускорение» в настройках браузера и переустановите свежий драйвер GPU.',
+      moduleIds: ['hagsAndGameMode', 'cleanShaderCache'],
+    });
+  }
+
+  if (
+    params.dropCount >= 4 ||
+    params.worstFrameMs >= params.targetFrameMs * 2.2 ||
+    params.stabilityPercent < 78
+  ) {
+    tips.push({
+      id: 'freeze-cpu-power',
+      severity: 'high',
+      title: 'Просадки кадров и фризы под смешанной нагрузкой CPU + GPU',
+      reason: `Пик кадра доходил до ${params.worstFrameMs} мс (${params.dropCount} дропов) — ядра CPU сбрасывают частоты или мешают фоновые процессы.`,
+      action: 'Включите схему «Макс. производительность», отключите парковку ядер CPU, Power Throttling и энергосбережение PCIe.',
+      moduleIds: [
+        'restorePoint',
+        'ultimatePower',
+        'cpuCoreParkingOff',
+        'disablePowerThrottling',
+        'pciExpressPowerOff',
+      ],
+    });
+    tips.push({
+      id: 'freeze-overlays-cache',
+      severity: 'medium',
+      title: 'Убрать фоновые буферы экрана и пересобрать кэш шейдеров',
+      reason: 'Xbox GameDVR, фоновые UWP и битые старые шейдеры DirectX вызывают резкие пики фреймтайма в момент компиляции.',
+      action: 'Отключите GameDVR, дайте играм приоритет MMCSS Tasks\\Games и очистите старый DX-кэш.',
+      moduleIds: ['gameTweaks', 'gpuPriority', 'disableOverlays', 'cleanShaderCache'],
+    });
+  } else if (
+    params.jitterMs >= 2.2 ||
+    params.onePercentLowFps < params.avgFps * 0.72 ||
+    params.dropCount > 0
+  ) {
+    tips.push({
+      id: 'freeze-frame-pacing',
+      severity: 'medium',
+      title: `Небольшой джиттер кадра (${params.jitterMs} мс) под нагрузкой видеокарты`,
+      reason: `1% Low просел до ${params.onePercentLowFps} FPS при среднем ${params.avgFps} FPS — очередь кадров DWM/GPU можно разгрузить.`,
+      action: 'Включите HAGS, оптимизацию оконного режима Flip Model и запретите усыпление дисков с текстурами.',
+      moduleIds: ['hagsAndGameMode', 'windowedOptWin11', 'win32PrioritySep', 'diskSleepOff'],
+    });
+  } else {
+    tips.push({
+      id: 'freeze-ok',
+      severity: 'ok',
+      title: 'Видеокарта и потоки держат нагрузку ровно без фризов',
+      reason: `1% Low ${params.onePercentLowFps} FPS, джиттер ${params.jitterMs} мс — критичных статтеров не обнаружено.`,
+      action: 'Для закрепления минимального Input Lag в играх можно добавить приоритет MMCSS и HAGS.',
+      moduleIds: ['gpuPriority', 'hagsAndGameMode'],
+    });
+  }
+
+  return tips;
 }
 
 export function computeStressSummary(params: {
@@ -22,6 +114,7 @@ export function computeStressSummary(params: {
   cpuWorkersUsed: number;
   gpuWorkloadLabel: string;
   durationSec: number;
+  isSoftwareRenderer?: boolean;
 }): StressBenchmarkSummary {
   const valid = params.deltas.filter((d) => Number.isFinite(d) && d > 0.5 && d < 250);
   const metrics = computeFrameMetrics(valid);
@@ -55,18 +148,32 @@ export function computeStressSummary(params: {
     verdictTone = 'warn';
   }
 
+  const antiFreezeTips = buildStressAntiFreezeTips({
+    avgFps: metrics.fps,
+    onePercentLowFps: metrics.onePercentLowFps,
+    worstFrameMs: metrics.worstFrameMs,
+    jitterMs: metrics.jitterMs,
+    targetFrameMs: metrics.targetFrameMs,
+    dropCount,
+    stabilityPercent,
+    gpuWorkloadLabel: params.gpuWorkloadLabel,
+    isSoftwareRenderer: params.isSoftwareRenderer,
+  });
+
   return {
     intensity: params.intensity,
     durationSec: Number(params.durationSec.toFixed(1)),
     avgFps: metrics.fps,
     onePercentLowFps: metrics.onePercentLowFps,
     worstFrameMs: metrics.worstFrameMs,
+    jitterMs: metrics.jitterMs,
     dropCount,
     stabilityPercent,
     cpuWorkersUsed: params.cpuWorkersUsed,
     gpuWorkloadLabel: params.gpuWorkloadLabel,
     verdict,
     verdictTone,
+    antiFreezeTips,
   };
 }
 
@@ -166,8 +273,9 @@ export function createGpuStressEngine(
 ): GpuStressEngine {
   const width = isSoftwareRenderer ? 192 : intensity === 'extreme' ? 1280 : 768;
   const height = isSoftwareRenderer ? 192 : intensity === 'extreme' ? 720 : 432;
-  const shaderIters = isSoftwareRenderer ? 4 : intensity === 'extreme' ? 42 : 16;
-  const triangleCount = isSoftwareRenderer ? 120 : intensity === 'extreme' ? 7000 : 2200;
+  const shaderIters = isSoftwareRenderer ? 4 : intensity === 'extreme' ? 48 : 18;
+  const triangleCount = isSoftwareRenderer ? 120 : intensity === 'extreme' ? 9000 : 2600;
+  const repeatDraws = !isSoftwareRenderer && intensity === 'extreme' ? 2 : 1;
 
   const canvas = document.createElement('canvas');
   canvas.width = width;
@@ -272,7 +380,7 @@ export function createGpuStressEngine(
 
         const label = isSoftwareRenderer
           ? `WebGL Шейдер (${width}×${height})`
-          : `WebGL ${width}×${height} · ${shaderIters}x шейдер + ${triangleCount} треуг.`;
+          : `WebGL ${width}×${height} · ${shaderIters}×${repeatDraws} шейдер + ${triangleCount} треуг.`;
 
         return {
           label,
@@ -281,11 +389,12 @@ export function createGpuStressEngine(
             gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
             gl.enableVertexAttribArray(posLoc);
             gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
-            gl.uniform1f(timeLoc, timeMs * 0.0015);
             gl.clearColor(0.02, 0.03, 0.06, 1.0);
             gl.clear(gl.COLOR_BUFFER_BIT);
-            // Draw heavy fullscreen shader quad + overdraw triangles
-            gl.drawArrays(gl.TRIANGLES, 0, totalVerts);
+            for (let pass = 0; pass < repeatDraws; pass++) {
+              gl.uniform1f(timeLoc, timeMs * 0.0015 + pass * 0.37);
+              gl.drawArrays(gl.TRIANGLES, 0, totalVerts);
+            }
             gl.flush();
           },
           dispose: () => {

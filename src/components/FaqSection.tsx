@@ -10,10 +10,10 @@ export function FaqSection() {
   };
 
   return (
-    <section id="faq" className="py-9 sm:py-11 px-4 sm:px-6 border-t border-zinc-800/80">
+    <section id="faq" className="py-9 sm:py-11 px-4 sm:px-6 border-t border-sky-200/10">
       <div className="max-w-3xl mx-auto">
         <div className="text-center mb-6">
-          <div className="text-xs font-mono text-zinc-400 tracking-wide mb-1">
+          <div className="text-xs font-mono text-amber-200/90 tracking-wide mb-1">
             06 · Безопасность и запуск
           </div>
           <h2 className="text-2xl font-bold text-white">
@@ -26,26 +26,26 @@ export function FaqSection() {
             return (
               <div
                 key={item.q}
-                className={`rounded-xl bg-[#111113] border transition-colors overflow-hidden ${
-                  isOpen ? 'border-zinc-500' : 'border-zinc-800'
+                className={`rounded-xl winter-card border transition-colors overflow-hidden ${
+                  isOpen ? 'border-amber-300/40' : 'border-sky-200/12'
                 }`}
               >
                 <button
                   type="button"
                   aria-expanded={isOpen}
                   onClick={() => toggleFaq(idx)}
-                  className="w-full px-4 py-3.5 text-left flex items-center justify-between gap-4 font-semibold text-sm text-zinc-100 hover:text-white transition cursor-pointer"
+                  className="w-full px-4 py-3.5 text-left flex items-center justify-between gap-4 font-semibold text-sm text-slate-100 hover:text-white transition cursor-pointer"
                 >
                   <span>{item.q}</span>
                   <ChevronDown
-                    className={`w-4 h-4 text-zinc-400 shrink-0 transition-transform duration-200 ${
+                    className={`w-4 h-4 text-amber-200/80 shrink-0 transition-transform duration-200 ${
                       isOpen ? 'rotate-180' : ''
                     }`}
                     aria-hidden="true"
                   />
                 </button>
                 {isOpen && (
-                  <div className="px-4 pb-3.5 text-xs sm:text-sm text-zinc-400 leading-relaxed border-t border-zinc-800/80 pt-2.5">
+                  <div className="px-4 pb-3.5 text-xs sm:text-sm text-slate-300 leading-relaxed border-t border-sky-200/12 pt-2.5">
                     {item.a}
                   </div>
                 )}

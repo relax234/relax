@@ -41,7 +41,7 @@ test('encodeShareCode and decodeShareInput round-trip Cyrillic names, hardware, 
       gameModeEnabled: true,
       gameDvrEnabled: false,
       mouseAccelEnabled: false,
-      mpoDisabled: true,
+      powerThrottlingOff: true,
       win32PrioritySep38: true,
       networkTweaksApplied: true,
       usbPowerSavingOff: false,
@@ -65,7 +65,7 @@ test('encodeShareCode and decodeShareInput round-trip Cyrillic names, hardware, 
     assert.equal(decodedFromUrl.snapshot.hw.hz, 165);
     assert.equal(decodedFromUrl.snapshot.hw.ramGb, 32);
     assert.equal(decodedFromUrl.snapshot.opts.power, 'on');
-    assert.equal(decodedFromUrl.snapshot.opts.mpo_off, 'on');
+    assert.equal(decodedFromUrl.snapshot.opts.power_throttling, 'on');
     assert.equal(decodedFromUrl.snapshot.opts.usb_power, 'off');
   }
 });
@@ -75,11 +75,13 @@ test('decodeShareInput accepts raw PowerShell OPTICORE report directly and rejec
   assert.equal(bad.ok, false);
 
   const rawPs =
-    'OPTICORE:{"cpuName":"Intel Core i5-12400F","gpuName":"AMD Radeon RX 6700 XT","ramTotalGb":16,"ramSpeedMhz":3200,"ramStickCount":2,"powerPlan":"balanced","hagsEnabled":false,"mouseAccelEnabled":false}';
+    'OPTICORE:{"cpuName":"Intel Core i5-12400F","cpuThreads":12,"windowsDisplayHz":144,"gpuName":"AMD Radeon RX 6700 XT","ramTotalGb":16,"ramSpeedMhz":3200,"ramStickCount":2,"powerPlan":"balanced","hagsEnabled":false,"mouseAccelEnabled":false}';
   const parsed = decodeShareInput(rawPs);
   assert.equal(parsed.ok, true);
   if (parsed.ok) {
     assert.equal(parsed.snapshot.hw.gpu, 'AMD Radeon RX 6700 XT');
+    assert.equal(parsed.snapshot.hw.cpuCores, 12);
+    assert.equal(parsed.snapshot.hw.hz, 144);
     assert.equal(parsed.snapshot.opts.power, 'off');
     assert.equal(parsed.snapshot.opts.mouse_raw, 'on');
   }

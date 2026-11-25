@@ -1,4 +1,5 @@
-import type { HardwareScanInput } from './scanner';
+import { classifyGpu, type HardwareScanInput } from './scanner';
+import { createGpuStressEngine } from './stressBenchmark';
 
 interface NavigatorExtended extends Navigator {
   deviceMemory?: number;
@@ -101,19 +102,25 @@ function measureDisplayCadence(): Promise<{
     let lastTime = 0;
     let frameCount = 0;
     const warmupFrames = 2;
-    const maxFrames = 44;
+    const maxFrames = 38;
+    const startAt = performance.now();
 
     const tick = (now: number) => {
       if (lastTime > 0 && frameCount >= warmupFrames) {
         const dt = now - lastTime;
-        if (dt > 1 && dt < 120) {
+        if (dt > 1 && dt < 150) {
           deltas.push(dt);
         }
       }
       lastTime = now;
       frameCount += 1;
 
-      if (frameCount < maxFrames) {
+      const elapsed = now - startAt;
+      const doneByFrames = frameCount >= maxFrames;
+      const doneByBudget = elapsed >= 1400 && deltas.length >= 6;
+      const hardCap = elapsed >= 2200;
+
+      if (!doneByFrames && !doneByBudget && !hardCap) {
         window.requestAnimationFrame(tick);
       } else {
         if (deltas.length < 4) {
@@ -196,6 +203,78 @@ async function detectBatteryStatus(): Promise<{
   }
 }
 
+function measureGpuLoadCadence(
+  targetHz: number,
+  isSoftwareRenderer: boolean,
+): Promise<{
+  gpuStressFps: number;
+  gpuStressJitterMs: number;
+  gpuStressDrops: number;
+  gpuStressWorkloadLabel: string;
+}> {
+  return new Promise((resolve) => {
+    const engine = createGpuStressEngine(isSoftwareRenderer ? 'medium' : 'extreme', isSoftwareRenderer);
+    const deltas: number[] = [];
+    let lastTime = 0;
+    let frameCount = 0;
+    const totalFrames = isSoftwareRenderer ? 12 : 28;
+    const startAt = performance.now();
+
+    const tick = (now: number) => {
+      try {
+        engine.renderPass(now);
+      } catch {
+        // Ignore single frame errors
+      }
+
+      if (lastTime > 0 && frameCount >= 2) {
+        const dt = now - lastTime;
+        if (dt > 1 && dt < 220) {
+          deltas.push(dt);
+        }
+      }
+      lastTime = now;
+      frameCount += 1;
+
+      const elapsed = now - startAt;
+      const doneByFrames = frameCount >= totalFrames;
+      const doneByBudget = elapsed >= 1500 && deltas.length >= 4;
+      const hardCap = elapsed >= 2200;
+
+      if (!doneByFrames && !doneByBudget && !hardCap) {
+        window.requestAnimationFrame(tick);
+      } else {
+        engine.dispose();
+        if (deltas.length < 4) {
+          resolve({
+            gpuStressFps: targetHz,
+            gpuStressJitterMs: 0.9,
+            gpuStressDrops: 0,
+            gpuStressWorkloadLabel: engine.label,
+          });
+          return;
+        }
+        const sorted = [...deltas].sort((a, b) => a - b);
+        const median = sorted[Math.floor(sorted.length / 2)];
+        const avg = deltas.reduce((a, b) => a + b, 0) / deltas.length;
+        const jitter =
+          deltas.reduce((acc, d) => acc + Math.abs(d - median), 0) / deltas.length;
+        const targetMs = 1000 / Math.max(30, targetHz);
+        const drops = deltas.filter((d) => d > targetMs * 1.5).length;
+
+        resolve({
+          gpuStressFps: Math.max(10, Math.min(360, Math.round(1000 / avg))),
+          gpuStressJitterMs: Number(jitter.toFixed(1)),
+          gpuStressDrops: drops,
+          gpuStressWorkloadLabel: engine.label,
+        });
+      }
+    };
+
+    window.requestAnimationFrame(tick);
+  });
+}
+
 export async function runBrowserHardwareProbe(
   onStep: (progress: number, statusText: string) => void,
 ): Promise<HardwareScanInput> {
@@ -203,8 +282,9 @@ export async function runBrowserHardwareProbe(
 
   onStep(15, 'Определение видеокарты, WebGL2 и текстурного буфера...');
   const gpu = detectWebGlInfo();
+  const isSoftwareRenderer = classifyGpu(gpu.renderer).vendor === 'software';
 
-  onStep(35, 'Анализ потоков CPU, ОЗУ, батареи и сети...');
+  onStep(32, 'Анализ потоков CPU, ОЗУ, батареи и сети...');
   const cpuCores = navigator.hardwareConcurrency || 4;
   const deviceMemoryGb =
     typeof nav.deviceMemory === 'number' && Number.isFinite(nav.deviceMemory)
@@ -220,13 +300,16 @@ export async function runBrowserHardwareProbe(
       : null;
   const battery = await detectBatteryStatus();
 
-  onStep(60, 'Замер задержки планировщика событий (Input Lag)...');
+  onStep(52, 'Замер задержки планировщика событий (Input Lag)...');
   const eventLoopLagMs = await measureEventLoopLag();
 
-  onStep(82, 'Замер герцовки дисплея и стабильности фреймтайма...');
+  onStep(70, 'Замер герцовки дисплея и базового фреймтайма...');
   const cadence = await measureDisplayCadence();
 
-  onStep(100, 'Формирование подробного отчёта и списка твиков...');
+  onStep(88, 'Нагрузочный тест видеокарты (WebGL шейдеры и рендер)...');
+  const gpuLoad = await measureGpuLoadCadence(cadence.measuredHz, isSoftwareRenderer);
+
+  onStep(100, 'Формирование подробного отчёта, BIOS-аудита и твиков...');
 
   return {
     cpuCores,
@@ -241,6 +324,10 @@ export async function runBrowserHardwareProbe(
     avgFrameMs: cadence.avgFrameMs,
     frameJitterMs: cadence.frameJitterMs,
     frameDeltas: cadence.deltas,
+    gpuStressFps: gpuLoad.gpuStressFps,
+    gpuStressJitterMs: gpuLoad.gpuStressJitterMs,
+    gpuStressDrops: gpuLoad.gpuStressDrops,
+    gpuStressWorkloadLabel: gpuLoad.gpuStressWorkloadLabel,
     eventLoopLagMs,
     onBattery: battery.onBattery,
     batteryLevelPercent: battery.batteryLevelPercent,

@@ -1,0 +1,45 @@
+{
+  "appId": "com.opticore.optimizer",
+  "productName": "OptiCore",
+  "asar": true,
+  "directories": {
+    "output": "../release"
+  },
+  "files": [
+    "main.cjs",
+    "preload.cjs",
+    "web-dist/**/*",
+    "package.json"
+  ],
+  "win": {
+    "target": [
+      {
+        "target": "nsis",
+        "arch": ["x64"]
+      },
+      {
+        "target": "portable",
+        "arch": ["x64"]
+      }
+    ]
+  },
+  "nsis": {
+    "oneClick": false,
+    "perMachine": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "OptiCore",
+    "artifactName": "OptiCore-Setup-${version}.exe"
+  },
+  "portable": {
+    "artifactName": "OptiCore-Portable-${version}.exe"
+  },
+  "publish": [
+    {
+      "provider": "github",
+      "owner": "YOUR_GITHUB_USER",
+      "repo": "OptiCore"
+    }
+  ]
+}

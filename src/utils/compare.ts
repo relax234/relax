@@ -14,7 +14,7 @@ export type OptFlagId =
   | 'xmp'
   | 'gamedvr_off'
   | 'mouse_raw'
-  | 'mpo_off'
+  | 'power_throttling'
   | 'win32_prio'
   | 'net_mmcss'
   | 'usb_power'
@@ -76,11 +76,11 @@ export const OPTIMIZATION_COMPARE_ITEMS: OptCompareItemMeta[] = [
     moduleIds: ['mouseRawInput'],
   },
   {
-    id: 'mpo_off',
-    category: 'GPU / FPS',
-    title: 'Отключён MPO (OverlayTestMode=5)',
-    desc: 'Убирает микроподёргивания DWM и мерцания при Alt-Tab',
-    moduleIds: ['disableFullscreenOpt'],
+    id: 'power_throttling',
+    category: 'Система',
+    title: 'Отключён Power Throttling и парковка ядер',
+    desc: 'Процессор держит стабильную частоту без сбросов в сложных сценах',
+    moduleIds: ['disablePowerThrottling', 'cpuCoreParkingOff'],
   },
   {
     id: 'win32_prio',
@@ -93,7 +93,7 @@ export const OPTIMIZATION_COMPARE_ITEMS: OptCompareItemMeta[] = [
     id: 'net_mmcss',
     category: 'GPU / FPS',
     title: 'Приоритет MMCSS и снятие сетевого троттлинга',
-    desc: 'SystemResponsiveness=0 и высокий приоритет Tasks\\Games',
+    desc: 'SystemResponsiveness=10 и высокий приоритет Tasks\\Games',
     moduleIds: ['gameTweaks', 'gpuPriority'],
   },
   {
@@ -135,10 +135,13 @@ export const OPT_MODULE_TO_FLAGS: Record<string, OptFlagId[]> = {
   disableOverlays: ['gamedvr_off'],
   gpuPriority: ['net_mmcss'],
   mouseRawInput: ['mouse_raw'],
-  disableFullscreenOpt: ['mpo_off'],
+  disablePowerThrottling: ['power_throttling'],
+  cpuCoreParkingOff: ['power_throttling'],
   win32PrioritySep: ['win32_prio'],
   usbPowerSavingOff: ['usb_power'],
   disableP2PUpdate: ['p2p_off'],
+  tcpRscAndEcnOptimize: ['net_mmcss'],
+  qosPacketSchedulerZero: ['p2p_off'],
   telemetryLite: ['telemetry_off'],
   cleanTemp: ['ssd_temp'],
 };
@@ -216,9 +219,9 @@ function resolveOptFlagState(
           return windowsReport.mouseAccelEnabled ? 'off' : 'on';
         }
         break;
-      case 'mpo_off':
-        if (windowsReport.mpoDisabled !== undefined) {
-          return windowsReport.mpoDisabled ? 'on' : 'off';
+      case 'power_throttling':
+        if (windowsReport.powerThrottlingOff !== undefined || windowsReport.cpuCoreParkingOff !== undefined) {
+          return windowsReport.powerThrottlingOff || windowsReport.cpuCoreParkingOff ? 'on' : 'off';
         }
         break;
       case 'win32_prio':
@@ -426,18 +429,19 @@ export function decodeShareInput(
       return { ok: false, error: parsedWin.error };
     }
     const wr = parsedWin.report;
+    const hz = wr.windowsDisplayHz ?? 144;
     const synthScan: HardwareScanInput = {
-      cpuCores: 8,
+      cpuCores: wr.cpuThreads ?? 8,
       deviceMemoryGb: wr.ramTotalGb ?? 16,
       gpuRenderer: wr.gpuName || 'Видеокарта Windows',
       gpuVendorRaw: wr.gpuName || '',
       webgl2Supported: true,
       screenWidth: 1920,
       screenHeight: 1080,
-      measuredHz: 144,
-      avgFrameMs: 6.9,
+      measuredHz: hz,
+      avgFrameMs: Number((1000 / Math.max(30, hz)).toFixed(1)),
       frameJitterMs: 0.8,
-      osName: 'Windows 10 / 11',
+      osName: wr.osCaption || 'Windows 10 / 11',
       isWindows: true,
       connectionRttMs: null,
     };
@@ -561,7 +565,7 @@ export function createDemoFriendSnapshot(): PcShareSnapshot {
       xmp: 'on',
       gamedvr_off: 'on',
       mouse_raw: 'on',
-      mpo_off: 'on',
+      power_throttling: 'on',
       win32_prio: 'on',
       net_mmcss: 'on',
       usb_power: 'off',
