@@ -86,10 +86,9 @@ function createWindow() {
   if (devUrl) {
     void mainWindow.loadURL(devUrl);
   } else {
-    // Try loading live cloud app first so updates appear instantly without rebuilding .exe
-    mainWindow.loadURL(LIVE_CLOUD_URL).catch(() => {
-      void mainWindow.loadFile(path.join(__dirname, 'web-dist', 'index.html'));
-    });
+    // ALWAYS load local bundled web-dist so the application opens instantly offline without "Cookie check" errors!
+    const localHtml = path.join(__dirname, 'web-dist', 'index.html');
+    void mainWindow.loadFile(localHtml);
   }
 }
 

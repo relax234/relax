@@ -44,10 +44,17 @@ namespace OptiCoreApp
             form.StartPosition = FormStartPosition.CenterScreen;
             form.BackColor = Color.FromArgb(7, 11, 20);
 
+            string localDist = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "dist", "index.html");
+            if (!System.IO.File.Exists(localDist)) {
+                localDist = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "dist", "index.html");
+            }
+            if (System.IO.File.Exists(localDist)) {
+                System.Diagnostics.Process.Start(localDist);
+                return;
+            }
             WebBrowser browser = new WebBrowser();
             browser.Dock = DockStyle.Fill;
-            browser.Url = new Uri("https://ais-pre-ycozi4jcbblbjgudogp3hh-567239189723.europe-west1.run.app");
-            
+            browser.DocumentText = "<html><body style='background:#070b14;color:#fff;font-family:sans-serif;padding:40px;text-align:center;'><h2>OptiCore Offline</h2><p>Для полного запуска откройте файл dist/index.html в браузере.</p></body></html>";
             form.Controls.Add(browser);
             Application.Run(form);
         }

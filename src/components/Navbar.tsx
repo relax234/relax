@@ -1,4 +1,4 @@
-import { RefreshCw, Snowflake } from 'lucide-react';
+import { Download, RefreshCw, Snowflake } from 'lucide-react';
 import { APP_VERSION } from '../utils/appUpdater';
 
 interface NavbarProps {
@@ -79,6 +79,13 @@ export function Navbar({ onOpenCmdGuide, onOpenUpdates }: NavbarProps) {
         </nav>
 
         <div className="flex items-center gap-2 shrink-0">
+          <a
+            href="#download-exe"
+            className="px-3 py-1.5 rounded-lg bg-sky-500/20 border border-sky-400/35 hover:bg-sky-400 hover:text-slate-950 text-sky-200 font-bold text-xs inline-flex items-center gap-1.5 transition whitespace-nowrap"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Скачать .exe</span>
+          </a>
           {onOpenUpdates && (
             <button
               type="button"
