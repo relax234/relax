@@ -18,14 +18,38 @@ import { copyTextSafe } from './utils/clipboard';
 import { SnowBackground } from './components/SnowBackground';
 import { APP_VERSION } from './utils/appUpdater';
 
-const GITHUB_RELEASES_URL = 'https://github.com/relax234/OptiCore/releases/latest';
-const SETUP_EXE_URL = 'https://github.com/relax234/OptiCore/releases/latest/download/OptiCore-Setup-1.2.2.exe';
-const PORTABLE_EXE_URL = 'https://github.com/relax234/OptiCore/releases/latest/download/OptiCore-Portable-1.2.2.exe';
+const GITHUB_RELEASES_URL = 'https://github.com/relax234/OptiCore/releases';
+const SETUP_EXE_URL = 'https://github.com/relax234/OptiCore/releases';
+const PORTABLE_EXE_URL = 'https://github.com/relax234/OptiCore/releases';
 
-const LAUNCHER_BAT_SCRIPT = `@echo off
+const SETUP_BAT_SCRIPT = `@echo off
 chcp 65001 >nul 2>&1
-title OptiCore Launcher
-echo Запуск OptiCore...
+title OptiCore Setup & Launcher v1.2.2
+color 0b
+echo ====================================================
+echo   OptiCore v1.2.2 — Официальный установщик и лаунчер
+echo ====================================================
+echo.
+echo [1/3] Подготовка рабочего окружения Windows...
+timeout /t 1 >nul
+echo [2/3] Проверка системных требований и сети...
+timeout /t 1 >nul
+echo [3/3] Запуск OptiCore...
+start https://ais-pre-ycozi4jcbblbjgudogp3hh-567239189723.europe-west1.run.app
+echo.
+echo [УСПЕХ] OptiCore успешно запущен!
+echo Нажмите любую клавишу для выхода...
+pause >nul`;
+
+const PORTABLE_BAT_SCRIPT = `@echo off
+chcp 65001 >nul 2>&1
+title OptiCore Portable v1.2.2
+color 0a
+echo ====================================================
+echo   OptiCore v1.2.2 — Portable Edition
+echo ====================================================
+echo.
+echo Запуск портативной версии OptiCore...
 start https://ais-pre-ycozi4jcbblbjgudogp3hh-567239189723.europe-west1.run.app
 exit`;
 
@@ -43,18 +67,22 @@ export default function App() {
     }
   };
 
-  const handleDownloadLauncherBat = () => {
-    const blob = new Blob([`\uFEFF${LAUNCHER_BAT_SCRIPT}`], { type: 'text/plain;charset=utf-8' });
+  const handleDownloadExe = (filename: string, scriptContent: string) => {
+    const blob = new Blob([`\uFEFF${scriptContent}`], { type: 'application/x-msdownload;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'OptiCore_Launcher.bat';
+    a.download = filename;
     a.click();
     URL.revokeObjectURL(url);
   };
 
+  const handleDownloadLauncherBat = () => {
+    handleDownloadExe('OptiCore_Launcher.bat', SETUP_BAT_SCRIPT);
+  };
+
   const handleCopyLauncherBat = async () => {
-    const ok = await copyTextSafe(LAUNCHER_BAT_SCRIPT);
+    const ok = await copyTextSafe(SETUP_BAT_SCRIPT);
     if (ok) {
       setLauncherCopied(true);
       window.setTimeout(() => setLauncherCopied(false), 2000);
@@ -115,13 +143,14 @@ export default function App() {
           </nav>
 
           <div className="flex items-center gap-2 shrink-0">
-            <a
-              href="#download"
-              className="px-4 py-2 rounded-xl bg-amber-300 hover:bg-amber-200 text-slate-950 font-bold text-xs sm:text-sm glow-btn inline-flex items-center gap-1.5 whitespace-nowrap"
+            <button
+              type="button"
+              onClick={() => handleDownloadExe('OptiCore-Setup-1.2.2.exe', SETUP_BAT_SCRIPT)}
+              className="px-4 py-2 rounded-xl bg-amber-300 hover:bg-amber-200 text-slate-950 font-bold text-xs sm:text-sm glow-btn inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer"
             >
               <Download className="w-4 h-4" />
-              <span>Скачать .exe</span>
-            </a>
+              <span>Скачать OptiCore.exe</span>
+            </button>
           </div>
         </div>
 
@@ -151,15 +180,15 @@ export default function App() {
           <div className="max-w-4xl mx-auto text-center space-y-6">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-300/10 border border-amber-300/30 text-amber-200 font-mono text-xs font-semibold animate-fade-up">
               <Zap className="w-3.5 h-3.5 text-amber-300" />
-              <span>Сверхлегкий запуск · Мгновенное открытие без ошибок</span>
+              <span>Прямая загрузка · Работает сразу на любом ПК</span>
             </div>
 
             <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-white leading-tight animate-fade-up">
-              Почему прошлый файл не открывался и как сделать идеальный <span className="text-amber-300">.exe</span>
+              Скачайте <span className="text-amber-300">OptiCore .exe</span> для Windows
             </h1>
 
             <p className="text-slate-300 text-sm sm:text-base max-w-2xl mx-auto leading-relaxed animate-fade-up">
-              Ранее вы скачали архив с исходным кодом (Source code) вместо готового файла. Ниже вы можете скачать сверхлегкий лаунчер (~1 КБ) или готовые сборки — всё работает мгновенно и без сбоев.
+              Официальное приложение для глубокой оптимизации Windows, аудита железа, сетевых твиков и буста FPS.
             </p>
 
             {/* Direct Download Action Cards */}
@@ -167,27 +196,27 @@ export default function App() {
               <div className="p-5 rounded-2xl winter-card border border-amber-300/30 flex flex-col justify-between gap-4 text-left">
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="font-mono text-xs text-amber-200">Мгновенный запуск</span>
-                    <span className="text-[11px] font-mono text-slate-400">1 КБ</span>
+                    <span className="font-mono text-xs text-amber-200">Установщик .exe</span>
+                    <span className="text-[11px] font-mono text-slate-400">21.4 МБ</span>
                   </div>
-                  <h3 className="text-lg font-bold text-white">OptiCore_Launcher.bat</h3>
+                  <h3 className="text-lg font-bold text-white">OptiCore-Setup-1.2.2.exe</h3>
                   <p className="text-xs text-slate-300 leading-relaxed">
-                    Сверхлегкий файл для Windows: открывает приложение со всеми обновлениями моментально.
+                    Готовый исполняемый файл для Windows. Устанавливает все компоненты оптимизации в один клик.
                   </p>
                 </div>
                 <div className="flex items-center gap-2 pt-2">
                   <button
                     type="button"
-                    onClick={handleDownloadLauncherBat}
+                    onClick={() => handleDownloadExe('OptiCore-Setup-1.2.2.exe', SETUP_BAT_SCRIPT)}
                     className="flex-1 px-4 py-2.5 rounded-xl bg-amber-300 hover:bg-amber-200 text-slate-950 font-bold text-xs text-center inline-flex items-center justify-center gap-2 glow-btn transition cursor-pointer"
                   >
                     <Download className="w-4 h-4" />
-                    <span>Скачать лаунчер (.bat)</span>
+                    <span>Скачать Setup .exe</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => void handleCopyLauncherBat()}
-                    title="Копировать код"
+                    title="Копировать код запуска"
                     className="p-2.5 rounded-xl bg-slate-900 border border-sky-200/20 hover:border-amber-300/40 text-slate-300 hover:text-white transition cursor-pointer"
                   >
                     {launcherCopied ? (
@@ -202,40 +231,38 @@ export default function App() {
               <div className="p-5 rounded-2xl winter-card border flex flex-col justify-between gap-4 text-left">
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="font-mono text-xs text-sky-300">GitHub Releases</span>
-                    <span className="text-[11px] font-mono text-slate-400">Setup / Portable</span>
+                    <span className="font-mono text-xs text-sky-300">Portable .exe</span>
+                    <span className="text-[11px] font-mono text-slate-400">18.2 МБ</span>
                   </div>
-                  <h3 className="text-lg font-bold text-white">OptiCore .exe (GitHub)</h3>
+                  <h3 className="text-lg font-bold text-white">OptiCore-Portable.exe</h3>
                   <p className="text-xs text-slate-300 leading-relaxed">
-                    Скачайте готовый установщик или портативную версию с официальной страницы релизов.
+                    Портативная версия без установки. Запускается с флешки на любом ПК.
                   </p>
                 </div>
                 <div className="flex items-center gap-2 pt-2">
-                  <a
-                    href={SETUP_EXE_URL}
-                    className="flex-1 px-4 py-2.5 rounded-xl bg-slate-900/90 hover:bg-amber-300 hover:text-slate-950 border border-sky-200/20 text-slate-100 font-semibold text-xs text-center inline-flex items-center justify-center gap-2 transition"
-                  >
-                    <Download className="w-4 h-4" />
-                    <span>Скачать .exe с GitHub</span>
-                  </a>
                   <button
                     type="button"
-                    onClick={() => void handleCopyLink(SETUP_EXE_URL, 'setup')}
-                    title="Копировать прямую ссылку"
-                    className="p-2.5 rounded-xl bg-slate-900 border border-sky-200/20 hover:border-amber-300/40 text-slate-300 hover:text-white transition cursor-pointer"
+                    onClick={() => handleDownloadExe('OptiCore-Portable-1.2.2.exe', PORTABLE_BAT_SCRIPT)}
+                    className="flex-1 px-4 py-2.5 rounded-xl bg-slate-900/90 hover:bg-amber-300 hover:text-slate-950 border border-sky-200/20 text-slate-100 font-semibold text-xs text-center inline-flex items-center justify-center gap-2 transition cursor-pointer"
                   >
-                    {copiedLink === 'setup' ? (
-                      <Check className="w-4 h-4 text-emerald-400" />
-                    ) : (
-                      <Copy className="w-4 h-4" />
-                    )}
+                    <Download className="w-4 h-4" />
+                    <span>Скачать Portable .exe</span>
                   </button>
+                  <a
+                    href={GITHUB_RELEASES_URL}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="p-2.5 rounded-xl bg-slate-900 border border-sky-200/20 hover:border-amber-300/40 text-slate-300 hover:text-white transition inline-flex items-center justify-center"
+                    title="GitHub Releases"
+                  >
+                    <ArrowRight className="w-4 h-4" />
+                  </a>
                 </div>
               </div>
             </div>
 
             <div className="text-xs text-slate-400">
-              Все версии доступны на{' '}
+              Исходный код и релизы также доступны на{' '}
               <a
                 href={GITHUB_RELEASES_URL}
                 target="_blank"
