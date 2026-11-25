@@ -64,12 +64,12 @@ export function GpuTipsSection() {
   const visibleCards = TIP_CARDS.filter((c) => platform === 'all' || c.id === platform);
 
   return (
-    <section id="gpu-tips" className="py-16 px-4 sm:px-6 border-t border-slate-800/70">
+    <section id="gpu-tips" className="py-16 px-4 sm:px-6 border-t border-slate-800/70 bg-slate-950/35">
       <div className="max-w-6xl mx-auto">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
           <div>
             <div className="text-xs font-mono text-emerald-400 tracking-wide">
-              04 · Тонкая настройка драйверов
+              05 · Тонкая настройка драйверов
             </div>
             <h2 className="text-3xl font-bold mt-1.5 text-white">
               Быстрые настройки драйверов и BIOS

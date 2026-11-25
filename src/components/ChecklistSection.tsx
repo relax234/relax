@@ -6,23 +6,25 @@ import {
 interface ChecklistSectionProps {
   checkedItems: Record<string, boolean>;
   onToggleCheck: (id: string) => void;
+  onCheckAllChecklist: () => void;
   onResetChecklist: () => void;
 }
 
 export function ChecklistSection({
   checkedItems,
   onToggleCheck,
+  onCheckAllChecklist,
   onResetChecklist,
 }: ChecklistSectionProps) {
   const score = calculateOptimizationScore(checkedItems);
 
   return (
-    <section id="checklist" className="py-16 px-4 sm:px-6 border-t border-slate-800/70">
+    <section id="checklist" className="py-16 px-4 sm:px-6 border-t border-slate-800/70 bg-slate-950/35">
       <div className="max-w-6xl mx-auto">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
           <div>
             <div className="text-xs font-mono text-cyan-400 tracking-wide">
-              02 · Ручной аудит системы
+              03 · Ручной аудит системы
             </div>
             <h2 className="text-3xl font-bold mt-1.5 text-white">
               Интерактивный чек-лист оптимизации
@@ -64,13 +66,25 @@ export function ChecklistSection({
               />
             </div>
             <div className="mt-3 flex items-center justify-between gap-3">
-              <button
-                type="button"
-                onClick={onResetChecklist}
-                className="text-xs text-slate-400 hover:text-rose-400 transition cursor-pointer"
-              >
-                Сбросить прогресс
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={onCheckAllChecklist}
+                  className="text-xs text-cyan-400 hover:text-cyan-300 transition cursor-pointer"
+                >
+                  Отметить все
+                </button>
+                <span className="text-slate-700" aria-hidden="true">
+                  ·
+                </span>
+                <button
+                  type="button"
+                  onClick={onResetChecklist}
+                  className="text-xs text-slate-400 hover:text-rose-400 transition cursor-pointer"
+                >
+                  Сбросить прогресс
+                </button>
+              </div>
               <span className="text-[11px] font-mono text-slate-500 tabular-nums">
                 {Object.values(checkedItems).filter(Boolean).length} / 12 пунктов
               </span>

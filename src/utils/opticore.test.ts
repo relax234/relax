@@ -5,6 +5,7 @@ import {
   SCRIPT_MODULES,
   calculateOptimizationScore,
   generateOptimizationScript,
+  generateRollbackScript,
 } from './opticore';
 
 test('calculateOptimizationScore returns 0% base stock when nothing is checked', () => {
@@ -27,10 +28,14 @@ test('calculateOptimizationScore reaches 100% and +25% stability when all items 
   assert.equal(result.label, 'Максимум FPS');
 });
 
-test('SCRIPT_MODULES contains 12 categorized tweaks with unique IDs', () => {
-  assert.equal(SCRIPT_MODULES.length, 12);
+test('SCRIPT_MODULES contains 20 categorized tweaks (5 per category) with unique IDs', () => {
+  assert.equal(SCRIPT_MODULES.length, 20);
   const ids = new Set(SCRIPT_MODULES.map((m) => m.id));
-  assert.equal(ids.size, 12);
+  assert.equal(ids.size, 20);
+  assert.equal(SCRIPT_MODULES.filter((m) => m.category === 'system').length, 5);
+  assert.equal(SCRIPT_MODULES.filter((m) => m.category === 'gaming').length, 5);
+  assert.equal(SCRIPT_MODULES.filter((m) => m.category === 'input').length, 5);
+  assert.equal(SCRIPT_MODULES.filter((m) => m.category === 'network').length, 5);
 });
 
 test('generateOptimizationScript builds valid .bat script with Windows paths preserved', () => {
@@ -46,7 +51,7 @@ test('generateOptimizationScript builds valid .bat script with Windows paths pre
   assert.doesNotMatch(bat, /ipconfig \/flushdns/);
 });
 
-test('generateOptimizationScript builds valid .ps1 script including new gaming and input tweaks', () => {
+test('generateOptimizationScript builds valid .ps1 script including extended community tweaks', () => {
   const emptyPs1 = generateOptimizationScript('ps1', {});
   assert.match(emptyPs1, /Выбери хотя бы один модуль слева!/);
 
@@ -55,10 +60,30 @@ test('generateOptimizationScript builds valid .ps1 script including new gaming a
     gpuPriority: true,
     hagsAndGameMode: true,
     mouseRawInput: true,
+    win32PrioritySep: true,
+    disableFullscreenOpt: true,
+    nagleDisable: true,
+    usbPowerSavingOff: true,
+    timerResolutionBcd: true,
   });
   assert.match(fullPs1, /Clear-DnsClientCache/);
   assert.match(fullPs1, /GPU Priority/);
   assert.match(fullPs1, /HwSchMode/);
   assert.match(fullPs1, /MouseSpeed/);
+  assert.match(fullPs1, /Win32PrioritySeparation/);
+  assert.match(fullPs1, /OverlayTestMode/);
+  assert.match(fullPs1, /TcpAckFrequency/);
+  assert.match(fullPs1, /DisableSelectiveSuspend/);
+  assert.match(fullPs1, /disabledynamictick/);
   assert.match(fullPs1, /Read-Host/);
+});
+
+test('generateRollbackScript builds reversible stock scripts for bat and ps1', () => {
+  const batRollback = generateRollbackScript('bat');
+  assert.match(batRollback, /GameDVR_Enabled.*\/d 1/);
+  assert.match(batRollback, /MouseSpeed.*1/);
+
+  const ps1Rollback = generateRollbackScript('ps1');
+  assert.match(ps1Rollback, /Win32PrioritySeparation.*-Value 2/);
+  assert.match(ps1Rollback, /OverlayTestMode/);
 });

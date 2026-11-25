@@ -25,6 +25,12 @@ export function Navbar() {
             Сканер ПК
           </a>
           <a
+            href="#compare"
+            className="py-1 border-b border-transparent hover:border-cyan-400 hover:text-white transition-colors whitespace-nowrap shrink-0"
+          >
+            Сравнение
+          </a>
+          <a
             href="#checklist"
             className="py-1 border-b border-transparent hover:border-cyan-400 hover:text-white transition-colors whitespace-nowrap shrink-0"
           >
@@ -35,12 +41,6 @@ export function Navbar() {
             className="py-1 border-b border-transparent hover:border-cyan-400 hover:text-white transition-colors whitespace-nowrap shrink-0"
           >
             Генератор
-          </a>
-          <a
-            href="#gpu-tips"
-            className="py-1 border-b border-transparent hover:border-cyan-400 hover:text-white transition-colors whitespace-nowrap shrink-0"
-          >
-            Драйверы и BIOS
           </a>
           <a
             href="#faq"

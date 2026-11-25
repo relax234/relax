@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import { Check, Copy, Download, ShieldCheck } from 'lucide-react';
+import { Check, Copy, Download, RotateCcw, ShieldCheck } from 'lucide-react';
+import { copyTextSafe } from '../utils/clipboard';
 import {
   SCRIPT_MODULES,
   generateOptimizationScript,
+  generateRollbackScript,
   type ScriptCategory,
   type ScriptFormat,
 } from '../utils/opticore';
@@ -13,6 +15,7 @@ interface ScriptGeneratorSectionProps {
   onToggleModule: (id: string) => void;
   onSelectPreset: (moduleIds: string[]) => void;
   onFormatChange: (fmt: ScriptFormat) => void;
+  onMarkApplied?: (moduleIds: string[]) => void;
 }
 
 type CategoryFilter = 'all' | ScriptCategory;
@@ -29,7 +32,7 @@ const PRESETS = [
   {
     id: 'safe',
     label: 'Баланс',
-    modules: ['restorePoint', 'ultimatePower', 'cleanTemp', 'gameTweaks'],
+    modules: ['restorePoint', 'ultimatePower', 'cleanTemp', 'gameTweaks', 'win32PrioritySep'],
   },
   {
     id: 'esports',
@@ -37,14 +40,20 @@ const PRESETS = [
     modules: [
       'restorePoint',
       'ultimatePower',
+      'timerResolutionBcd',
       'gameTweaks',
       'gpuPriority',
       'hagsAndGameMode',
+      'win32PrioritySep',
+      'disableFullscreenOpt',
       'mouseRawInput',
       'disableOverlays',
+      'disableStickyKeys',
+      'usbPowerSavingOff',
       'cleanTemp',
       'dnsFlush',
       'disableP2PUpdate',
+      'nagleDisable',
       'telemetryLite',
     ],
   },
@@ -53,18 +62,31 @@ const PRESETS = [
     label: 'Ввод и отклик',
     modules: [
       'restorePoint',
+      'timerResolutionBcd',
       'gameTweaks',
       'gpuPriority',
       'hagsAndGameMode',
+      'win32PrioritySep',
+      'disableFullscreenOpt',
       'mouseRawInput',
       'disableOverlays',
       'visualEffectsPerf',
+      'disableStickyKeys',
+      'usbPowerSavingOff',
     ],
   },
   {
     id: 'cleanup',
     label: 'Очистка и сеть',
-    modules: ['restorePoint', 'cleanTemp', 'dnsFlush', 'disableP2PUpdate'],
+    modules: [
+      'restorePoint',
+      'disableHibernation',
+      'cleanTemp',
+      'dnsFlush',
+      'disableP2PUpdate',
+      'nagleDisable',
+      'memoryStorageBoost',
+    ],
   },
 ] as const;
 
@@ -74,11 +96,16 @@ export function ScriptGeneratorSection({
   onToggleModule,
   onSelectPreset,
   onFormatChange,
+  onMarkApplied,
 }: ScriptGeneratorSectionProps) {
   const [copied, setCopied] = useState(false);
+  const [markedApplied, setMarkedApplied] = useState(false);
+  const [rollbackMode, setRollbackMode] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all');
 
-  const generatedCode = generateOptimizationScript(format, selectedModules);
+  const generatedCode = rollbackMode
+    ? generateRollbackScript(format)
+    : generateOptimizationScript(format, selectedModules);
   const activeCount = SCRIPT_MODULES.filter((m) => selectedModules[m.id]).length;
   const lineCount = generatedCode.split('\n').length;
 
@@ -88,12 +115,10 @@ export function ScriptGeneratorSection({
       : SCRIPT_MODULES.filter((m) => m.category === categoryFilter);
 
   const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(generatedCode);
+    const ok = await copyTextSafe(generatedCode);
+    if (ok) {
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1800);
-    } catch {
-      setCopied(false);
     }
   };
 
@@ -102,31 +127,33 @@ export function ScriptGeneratorSection({
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = format === 'bat' ? 'OptiCore_Optimize.bat' : 'OptiCore_Optimize.ps1';
+    const prefix = rollbackMode ? 'OptiCore_Rollback' : 'OptiCore_Optimize';
+    a.download = format === 'bat' ? `${prefix}.bat` : `${prefix}.ps1`;
     a.click();
     URL.revokeObjectURL(url);
   };
 
   const isPresetActive = (presetModules: readonly string[]) =>
+    !rollbackMode &&
     SCRIPT_MODULES.every((m) => !!selectedModules[m.id] === presetModules.includes(m.id));
 
   return (
     <section
       id="generator"
-      className="py-16 px-4 sm:px-6 border-t border-slate-800/70 bg-slate-950/40"
+      className="py-16 px-4 sm:px-6 border-t border-slate-800/70"
     >
       <div className="max-w-6xl mx-auto">
         <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-8">
           <div>
             <div className="text-xs font-mono text-violet-400 tracking-wide">
-              03 · Автоматизация настройки
+              04 · Автоматизация настройки
             </div>
             <h2 className="text-3xl font-bold mt-1.5 text-white">
               Генератор безопасного скрипта
             </h2>
             <p className="text-slate-400 text-sm mt-2">
-              Выбери готовый профиль или нужные твики из 12 модулей — справа соберётся открытый
-              файл.
+              Выбери готовый профиль или нужные твики из {SCRIPT_MODULES.length} модулей — справа
+              соберётся открытый файл.
             </p>
           </div>
 
@@ -138,7 +165,10 @@ export function ScriptGeneratorSection({
                 <button
                   key={preset.id}
                   type="button"
-                  onClick={() => onSelectPreset([...preset.modules])}
+                  onClick={() => {
+                    setRollbackMode(false);
+                    onSelectPreset([...preset.modules]);
+                  }}
                   className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap cursor-pointer ${
                     active
                       ? 'bg-violet-500 text-white font-semibold'
@@ -188,7 +218,10 @@ export function ScriptGeneratorSection({
               <div className="flex items-center gap-2 text-xs">
                 <button
                   type="button"
-                  onClick={() => onSelectPreset(SCRIPT_MODULES.map((m) => m.id))}
+                  onClick={() => {
+                    setRollbackMode(false);
+                    onSelectPreset(SCRIPT_MODULES.map((m) => m.id));
+                  }}
                   className="text-cyan-400 hover:text-cyan-300 transition cursor-pointer"
                 >
                   Выбрать все
@@ -198,7 +231,10 @@ export function ScriptGeneratorSection({
                 </span>
                 <button
                   type="button"
-                  onClick={() => onSelectPreset([])}
+                  onClick={() => {
+                    setRollbackMode(false);
+                    onSelectPreset([]);
+                  }}
                   className="text-slate-400 hover:text-slate-200 transition cursor-pointer"
                 >
                   Снять выбор
@@ -221,7 +257,10 @@ export function ScriptGeneratorSection({
                     <input
                       type="checkbox"
                       checked={active}
-                      onChange={() => onToggleModule(mod.id)}
+                      onChange={() => {
+                        setRollbackMode(false);
+                        onToggleModule(mod.id);
+                      }}
                       className="mt-1 w-4 h-4 rounded accent-violet-500 cursor-pointer shrink-0"
                     />
                     <div className="min-w-0 flex-1">
@@ -254,7 +293,7 @@ export function ScriptGeneratorSection({
                       : 'bg-slate-800 text-slate-300 hover:text-white'
                   }`}
                 >
-                  OptiCore.bat
+                  .bat
                 </button>
                 <button
                   type="button"
@@ -265,10 +304,25 @@ export function ScriptGeneratorSection({
                       : 'bg-slate-800 text-slate-300 hover:text-white'
                   }`}
                 >
-                  OptiCore.ps1
+                  .ps1
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRollbackMode((r) => !r)}
+                  title="Показать скрипт возврата стандартных настроек Windows"
+                  className={`px-2.5 py-1 rounded-md text-xs font-mono font-semibold transition inline-flex items-center gap-1 cursor-pointer ${
+                    rollbackMode
+                      ? 'bg-amber-400 text-slate-950'
+                      : 'bg-slate-800 text-slate-300 hover:text-white'
+                  }`}
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  <span>Откат</span>
                 </button>
                 <span className="hidden xl:inline-block text-[11px] font-mono text-slate-400 ml-1.5 tabular-nums whitespace-nowrap">
-                  {activeCount}/{SCRIPT_MODULES.length} мод. · {lineCount} строк
+                  {rollbackMode
+                    ? `Сток · ${lineCount} строк`
+                    : `${activeCount}/${SCRIPT_MODULES.length} мод. · ${lineCount} строк`}
                 </span>
               </div>
               <div className="flex items-center gap-2 shrink-0">
@@ -297,11 +351,33 @@ export function ScriptGeneratorSection({
             <pre className="p-5 text-xs sm:text-sm font-mono text-cyan-100/95 overflow-x-auto max-h-[470px] leading-relaxed">
               <code data-testid="code-output">{generatedCode}</code>
             </pre>
-            <div className="px-4 py-2.5 bg-[#0C1220]/70 border-t border-slate-800/80 flex items-center gap-2 text-xs text-slate-400">
-              <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span>
-                Используются только встроенные утилиты Windows (powercfg, reg, ipconfig, netsh, sc).
-              </span>
+            <div className="px-4 py-2.5 bg-[#0C1220]/70 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
+              <div className="flex items-center gap-2 min-w-0">
+                <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>
+                  {rollbackMode
+                    ? 'Режим отката: возвращает стандартные параметры Windows 10/11.'
+                    : 'Используются только встроенные утилиты Windows (powercfg, reg, bcdedit, fsutil, netsh, sc).'}
+                </span>
+              </div>
+              {!rollbackMode && activeCount > 0 && onMarkApplied && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const activeIds = SCRIPT_MODULES.filter((m) => selectedModules[m.id]).map(
+                      (m) => m.id,
+                    );
+                    onMarkApplied(activeIds);
+                    setMarkedApplied(true);
+                    window.setTimeout(() => setMarkedApplied(false), 2200);
+                  }}
+                  className="text-xs font-mono text-cyan-300 hover:text-cyan-200 underline-offset-4 hover:underline cursor-pointer whitespace-nowrap shrink-0"
+                >
+                  {markedApplied
+                    ? 'Отмечено в профиле сравнения ✓'
+                    : '✓ Применил у себя (отметить для сравнения)'}
+                </button>
+              )}
             </div>
           </div>
         </div>

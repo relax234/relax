@@ -10,11 +10,11 @@ export function FaqSection() {
   };
 
   return (
-    <section id="faq" className="py-16 px-4 sm:px-6 border-t border-slate-800/70 bg-slate-950/40">
+    <section id="faq" className="py-16 px-4 sm:px-6 border-t border-slate-800/70">
       <div className="max-w-3xl mx-auto">
         <div className="text-center mb-8">
           <div className="text-xs font-mono text-slate-400 tracking-wide mb-1.5">
-            05 · Безопасность и запуск
+            06 · Безопасность и запуск
           </div>
           <h2 className="text-2xl sm:text-3xl font-bold text-white">
             Частые вопросы и безопасность

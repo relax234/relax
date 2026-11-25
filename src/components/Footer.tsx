@@ -19,6 +19,9 @@ export function Footer() {
           <a href="#scanner" className="hover:text-cyan-400 transition-colors">
             Сканер
           </a>
+          <a href="#compare" className="hover:text-cyan-400 transition-colors">
+            Сравнение
+          </a>
           <a href="#checklist" className="hover:text-cyan-400 transition-colors">
             Чек-лист
           </a>

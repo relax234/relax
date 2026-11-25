@@ -138,6 +138,7 @@ export const CHECKLIST_DATA: ChecklistGroup[] = [
 ];
 
 export const SCRIPT_MODULES: ScriptModule[] = [
+  // === SYSTEM (5) ===
   {
     id: 'restorePoint',
     category: 'system',
@@ -165,6 +166,52 @@ powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 | Out-Null
 powercfg /setactive SCHEME_MIN`,
   },
   {
+    id: 'timerResolutionBcd',
+    category: 'system',
+    impactTag: 'Ровный FrameTime',
+    title: 'Стабилизировать системный таймер (BCDEDIT)',
+    desc: 'Отключает плавающий тик (disabledynamictick) для ровного фреймтайма в играх',
+    defaultEnabled: false,
+    bat: String.raw`echo Настройка системного таймера BCDEDIT...
+bcdedit /set disabledynamictick yes >nul 2>&1
+bcdedit /set useplatformtick yes >nul 2>&1`,
+    ps1: String.raw`Write-Host "Настройка системного таймера BCDEDIT..." -ForegroundColor Cyan
+bcdedit /set disabledynamictick yes | Out-Null
+bcdedit /set useplatformtick yes | Out-Null`,
+  },
+  {
+    id: 'disableHibernation',
+    category: 'system',
+    impactTag: '+4–16 ГБ SSD',
+    title: 'Отключить гибернацию и Fast Startup (hiberfil.sys)',
+    desc: 'Освобождает место на SSD и убирает накопительные ошибки ядра после перезагрузки',
+    defaultEnabled: false,
+    bat: String.raw`echo Отключение гибернации...
+powercfg /h off >nul 2>&1`,
+    ps1: String.raw`Write-Host "Отключение гибернации..." -ForegroundColor Cyan
+powercfg /h off`,
+  },
+  {
+    id: 'telemetryLite',
+    category: 'system',
+    impactTag: '-Фон CPU',
+    title: 'Отключить телеметрию диагностики (DiagTrack)',
+    desc: 'Останавливает фоновую отправку отчётов использования Windows',
+    defaultEnabled: false,
+    bat: String.raw`echo Отключение службы DiagTrack и dmwappushservice...
+sc stop DiagTrack >nul 2>&1
+sc config DiagTrack start= disabled >nul 2>&1
+sc stop dmwappushservice >nul 2>&1
+sc config dmwappushservice start= disabled >nul 2>&1`,
+    ps1: String.raw`Write-Host "Отключение службы DiagTrack..." -ForegroundColor Cyan
+Stop-Service "DiagTrack" -Force -ErrorAction SilentlyContinue
+Set-Service "DiagTrack" -StartupType Disabled -ErrorAction SilentlyContinue
+Stop-Service "dmwappushservice" -Force -ErrorAction SilentlyContinue
+Set-Service "dmwappushservice" -StartupType Disabled -ErrorAction SilentlyContinue`,
+  },
+
+  // === GAMING & GPU (5) ===
+  {
     id: 'gameTweaks',
     category: 'gaming',
     impactTag: '1% Low FPS',
@@ -190,12 +237,14 @@ Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multi
     bat: String.raw`echo Настройка приоритета GPU/CPU для игр (MMCSS)...
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "GPU Priority" /t REG_DWORD /d 8 /f >nul
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "Priority" /t REG_DWORD /d 6 /f >nul
-reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "Scheduling Category" /t REG_SZ /d "High" /f >nul`,
+reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "Scheduling Category" /t REG_SZ /d "High" /f >nul
+reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "SFIO Priority" /t REG_SZ /d "High" /f >nul`,
     ps1: String.raw`Write-Host "Настройка приоритета GPU/CPU для игр (MMCSS)..." -ForegroundColor Cyan
 $gamesPath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games"
 Set-ItemProperty -Path $gamesPath -Name "GPU Priority" -Value 8 -ErrorAction SilentlyContinue
 Set-ItemProperty -Path $gamesPath -Name "Priority" -Value 6 -ErrorAction SilentlyContinue
-Set-ItemProperty -Path $gamesPath -Name "Scheduling Category" -Value "High" -ErrorAction SilentlyContinue`,
+Set-ItemProperty -Path $gamesPath -Name "Scheduling Category" -Value "High" -ErrorAction SilentlyContinue
+Set-ItemProperty -Path $gamesPath -Name "SFIO Priority" -Value "High" -ErrorAction SilentlyContinue`,
   },
   {
     id: 'hagsAndGameMode',
@@ -213,6 +262,32 @@ Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\GraphicsDrivers" 
 Set-ItemProperty -Path "HKCU:\Software\Microsoft\GameBar" -Name "AllowAutoGameMode" -Value 1 -ErrorAction SilentlyContinue
 Set-ItemProperty -Path "HKCU:\Software\Microsoft\GameBar" -Name "AutoGameModeEnabled" -Value 1 -ErrorAction SilentlyContinue`,
   },
+  {
+    id: 'win32PrioritySep',
+    category: 'gaming',
+    impactTag: '+Отклик CPU',
+    title: 'Приоритет активного окна (Win32PrioritySeparation = 38)',
+    desc: 'Популярный киберспортивный твик (0x26): отдаёт короткие кванты CPU активной игре',
+    defaultEnabled: false,
+    bat: String.raw`echo Настройка Win32PrioritySeparation (0x26 / 38)...
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v "Win32PrioritySeparation" /t REG_DWORD /d 38 /f >nul`,
+    ps1: String.raw`Write-Host "Настройка Win32PrioritySeparation (0x26 / 38)..." -ForegroundColor Cyan
+Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\PriorityControl" -Name "Win32PrioritySeparation" -Value 38 -ErrorAction SilentlyContinue`,
+  },
+  {
+    id: 'disableFullscreenOpt',
+    category: 'gaming',
+    impactTag: '-Статтеры MPO',
+    title: 'Отключить MPO и повысить плавность DWM (OverlayTestMode=5)',
+    desc: 'Убирает микроподёргивания и мерцания в играх и при Alt-Tab на Windows 10/11',
+    defaultEnabled: false,
+    bat: String.raw`echo Отключение Multi-Plane Overlay (MPO)...
+reg add "HKLM\SOFTWARE\Microsoft\Windows\Dwm" /v "OverlayTestMode" /t REG_DWORD /d 5 /f >nul`,
+    ps1: String.raw`Write-Host "Отключение Multi-Plane Overlay (MPO)..." -ForegroundColor Cyan
+Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\Dwm" -Name "OverlayTestMode" -Value 5 -ErrorAction SilentlyContinue`,
+  },
+
+  // === INPUT & OVERLAYS (5) ===
   {
     id: 'mouseRawInput',
     category: 'input',
@@ -260,6 +335,40 @@ Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\P
 Set-ItemProperty -Path "HKCU:\Control Panel\Desktop\WindowMetrics" -Name "MinAnimate" -Value "0" -ErrorAction SilentlyContinue`,
   },
   {
+    id: 'disableStickyKeys',
+    category: 'input',
+    impactTag: 'Без Alt-Tab',
+    title: 'Отключить залипание клавиш (StickyKeys / FilterKeys)',
+    desc: 'Исключает случайное сворачивание игры при частом нажатии Shift / Ctrl',
+    defaultEnabled: false,
+    bat: String.raw`echo Отключение залипания клавиш...
+reg add "HKCU\Control Panel\Accessibility\StickyKeys" /v "Flags" /t REG_SZ /d "506" /f >nul
+reg add "HKCU\Control Panel\Accessibility\Keyboard Response" /v "Flags" /t REG_SZ /d "122" /f >nul
+reg add "HKCU\Control Panel\Accessibility\ToggleKeys" /v "Flags" /t REG_SZ /d "58" /f >nul`,
+    ps1: String.raw`Write-Host "Отключение залипания клавиш..." -ForegroundColor Cyan
+Set-ItemProperty -Path "HKCU:\Control Panel\Accessibility\StickyKeys" -Name "Flags" -Value "506" -ErrorAction SilentlyContinue
+Set-ItemProperty -Path "HKCU:\Control Panel\Accessibility\Keyboard Response" -Name "Flags" -Value "122" -ErrorAction SilentlyContinue
+Set-ItemProperty -Path "HKCU:\Control Panel\Accessibility\ToggleKeys" -Name "Flags" -Value "58" -ErrorAction SilentlyContinue`,
+  },
+  {
+    id: 'usbPowerSavingOff',
+    category: 'input',
+    impactTag: 'Стабильный USB',
+    title: 'Запретить отключение питания USB (DisableSelectiveSuspend)',
+    desc: 'Мышь, клавиатура и гарнитура не засыпают в простое и не теряют отклик',
+    defaultEnabled: false,
+    bat: String.raw`echo Отключение энергосбережения USB-портов...
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\USB" /v "DisableSelectiveSuspend" /t REG_DWORD /d 1 /f >nul
+powercfg /setacvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 0 >nul 2>&1
+powercfg /setactive SCHEME_CURRENT >nul 2>&1`,
+    ps1: String.raw`Write-Host "Отключение энергосбережения USB-портов..." -ForegroundColor Cyan
+New-Item -Path "HKLM:\SYSTEM\CurrentControlSet\Services\USB" -Force | Out-Null
+Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\USB" -Name "DisableSelectiveSuspend" -Value 1 -ErrorAction SilentlyContinue
+powercfg /setacvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 0 | Out-Null`,
+  },
+
+  // === NETWORK & STORAGE (5) ===
+  {
     id: 'cleanTemp',
     category: 'network',
     impactTag: 'Очистка SSD',
@@ -284,10 +393,12 @@ Remove-Item "$env:LOCALAPPDATA\D3DSCache\*" -Recurse -Force -ErrorAction Silentl
     defaultEnabled: false,
     bat: String.raw`echo Сброс DNS-кэша и оптимизация TCP...
 ipconfig /flushdns >nul
-netsh int tcp set global autotuninglevel=normal >nul 2>&1`,
+netsh int tcp set global autotuninglevel=normal >nul 2>&1
+netsh int tcp set global ecncapability=disabled >nul 2>&1`,
     ps1: String.raw`Write-Host "Сброс DNS-кэша и оптимизация TCP..." -ForegroundColor Cyan
 Clear-DnsClientCache
-netsh int tcp set global autotuninglevel=normal | Out-Null`,
+netsh int tcp set global autotuninglevel=normal | Out-Null
+netsh int tcp set global ecncapability=disabled | Out-Null`,
   },
   {
     id: 'disableP2PUpdate',
@@ -303,25 +414,40 @@ New-Item -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\DeliveryOptimiza
 Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\DeliveryOptimization\Config" -Name "DODownloadMode" -Value 0 -ErrorAction SilentlyContinue`,
   },
   {
-    id: 'telemetryLite',
-    category: 'system',
-    impactTag: '-Фон CPU',
-    title: 'Отключить телеметрию диагностики (DiagTrack)',
-    desc: 'Останавливает фоновую отправку отчётов использования Windows',
+    id: 'nagleDisable',
+    category: 'network',
+    impactTag: '-Пинг / Лаги',
+    title: 'Отключить алгоритм Нагла (TcpAckFrequency / TCPNoDelay)',
+    desc: 'Сетевые пакеты отправляются мгновенно без буферизации — снижает джиттер пинга',
     defaultEnabled: false,
-    bat: String.raw`echo Отключение службы DiagTrack...
-sc stop DiagTrack >nul 2>&1
-sc config DiagTrack start= disabled >nul 2>&1`,
-    ps1: String.raw`Write-Host "Отключение службы DiagTrack..." -ForegroundColor Cyan
-Stop-Service "DiagTrack" -Force -ErrorAction SilentlyContinue
-Set-Service "DiagTrack" -StartupType Disabled -ErrorAction SilentlyContinue`,
+    bat: String.raw`echo Отключение алгоритма Нагла для сетевых адаптеров...
+powershell -Command "Get-ChildItem 'HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces' | ForEach-Object { Set-ItemProperty -Path $_.PSPath -Name 'TcpAckFrequency' -Value 1 -ErrorAction SilentlyContinue; Set-ItemProperty -Path $_.PSPath -Name 'TCPNoDelay' -Value 1 -ErrorAction SilentlyContinue }" >nul 2>&1`,
+    ps1: String.raw`Write-Host "Отключение алгоритма Нагла для сетевых адаптеров..." -ForegroundColor Cyan
+Get-ChildItem "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces" | ForEach-Object {
+  Set-ItemProperty -Path $_.PSPath -Name "TcpAckFrequency" -Value 1 -ErrorAction SilentlyContinue
+  Set-ItemProperty -Path $_.PSPath -Name "TCPNoDelay" -Value 1 -ErrorAction SilentlyContinue
+}`,
+  },
+  {
+    id: 'memoryStorageBoost',
+    category: 'network',
+    impactTag: 'Быстрее SSD',
+    title: 'Ускорить NTFS (DisableLastAccess) и отключить дампы памяти',
+    desc: 'Снижает лишние операции записи на SSD при чтении файлов в играх',
+    defaultEnabled: false,
+    bat: String.raw`echo Оптимизация NTFS и отключение лишних дампов...
+fsutil behavior set disablelastaccess 1 >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\CrashControl" /v "CrashDumpEnabled" /t REG_DWORD /d 0 /f >nul`,
+    ps1: String.raw`Write-Host "Оптимизация NTFS и отключение лишних дампов..." -ForegroundColor Cyan
+fsutil behavior set disablelastaccess 1 | Out-Null
+Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\CrashControl" -Name "CrashDumpEnabled" -Value 0 -ErrorAction SilentlyContinue`,
   },
 ];
 
 export const FAQ_DATA: FaqEntry[] = [
   {
     q: 'Безопасно ли запускать сгенерированный скрипт?',
-    a: 'Да. В скрипте используются только встроенные утилиты Windows (powercfg, reg, ipconfig, netsh, sc). Весь код открыт перед скачиванием, а первый пункт автоматически создаёт точку восстановления.',
+    a: 'Да. В скрипте используются только встроенные утилиты Windows (powercfg, reg, ipconfig, netsh, bcdedit, fsutil, sc). Весь код открыт перед скачиванием, первый пункт создаёт точку восстановления, а также доступен скрипт отката в сток.',
   },
   {
     q: 'Как правильно запустить .bat или .ps1 файл?',
@@ -432,4 +558,54 @@ Write-Host "==========================================" -ForegroundColor Cyan
   }
   code += `Read-Host "Нажми Enter для выхода"`;
   return code;
+}
+
+export function generateRollbackScript(format: ScriptFormat): string {
+  if (format === 'bat') {
+    return String.raw`@echo off
+chcp 65001 >nul
+title OptiCore Rollback — Сброс в сток
+echo Возврат параметров Windows по умолчанию...
+powercfg /setactive 381b4222-f694-41f0-9685-ff5bb260df2e >nul 2>&1
+powercfg /h on >nul 2>&1
+bcdedit /deletevalue disabledynamictick >nul 2>&1
+bcdedit /deletevalue useplatformtick >nul 2>&1
+reg add "HKCU\System\GameConfigStore" /v "GameDVR_Enabled" /t REG_DWORD /d 1 /f >nul
+reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v "NetworkThrottlingIndex" /t REG_DWORD /d 10 /f >nul
+reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v "SystemResponsiveness" /t REG_DWORD /d 20 /f >nul
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v "Win32PrioritySeparation" /t REG_DWORD /d 2 /f >nul
+reg delete "HKLM\SOFTWARE\Microsoft\Windows\Dwm" /v "OverlayTestMode" /f >nul 2>&1
+reg add "HKCU\Control Panel\Mouse" /v "MouseSpeed" /t REG_SZ /d "1" /f >nul
+reg add "HKCU\Control Panel\Mouse" /v "MouseThreshold1" /t REG_SZ /d "6" /f >nul
+reg add "HKCU\Control Panel\Mouse" /v "MouseThreshold2" /t REG_SZ /d "10" /f >nul
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize" /v "EnableTransparency" /t REG_DWORD /d 1 /f >nul
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications" /v "GlobalUserDisabled" /t REG_DWORD /d 0 /f >nul
+reg delete "HKLM\SYSTEM\CurrentControlSet\Services\USB" /v "DisableSelectiveSuspend" /f >nul 2>&1
+sc config DiagTrack start= auto >nul 2>&1
+sc start DiagTrack >nul 2>&1
+echo Готово! Перезагрузи ПК для полного отката.
+pause`;
+  }
+
+  return String.raw`# OptiCore Rollback — Возврат параметров Windows в сток
+Write-Host "Возврат параметров Windows по умолчанию..." -ForegroundColor Yellow
+powercfg /setactive 381b4222-f694-41f0-9685-ff5bb260df2e | Out-Null
+powercfg /h on
+bcdedit /deletevalue disabledynamictick | Out-Null
+bcdedit /deletevalue useplatformtick | Out-Null
+Set-ItemProperty -Path "HKCU:\System\GameConfigStore" -Name "GameDVR_Enabled" -Value 1 -ErrorAction SilentlyContinue
+Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" -Name "NetworkThrottlingIndex" -Value 10 -ErrorAction SilentlyContinue
+Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" -Name "SystemResponsiveness" -Value 20 -ErrorAction SilentlyContinue
+Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\PriorityControl" -Name "Win32PrioritySeparation" -Value 2 -ErrorAction SilentlyContinue
+Remove-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\Dwm" -Name "OverlayTestMode" -ErrorAction SilentlyContinue
+Set-ItemProperty -Path "HKCU:\Control Panel\Mouse" -Name "MouseSpeed" -Value "1" -ErrorAction SilentlyContinue
+Set-ItemProperty -Path "HKCU:\Control Panel\Mouse" -Name "MouseThreshold1" -Value "6" -ErrorAction SilentlyContinue
+Set-ItemProperty -Path "HKCU:\Control Panel\Mouse" -Name "MouseThreshold2" -Value "10" -ErrorAction SilentlyContinue
+Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "EnableTransparency" -Value 1 -ErrorAction SilentlyContinue
+Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications" -Name "GlobalUserDisabled" -Value 0 -ErrorAction SilentlyContinue
+Remove-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\USB" -Name "DisableSelectiveSuspend" -ErrorAction SilentlyContinue
+Set-Service "DiagTrack" -StartupType Automatic -ErrorAction SilentlyContinue
+Start-Service "DiagTrack" -ErrorAction SilentlyContinue
+Write-Host "Готово! Перезагрузи ПК для полного отката." -ForegroundColor Green
+Read-Host "Нажми Enter для выхода"`;
 }

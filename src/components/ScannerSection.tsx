@@ -16,7 +16,7 @@ import {
   Wrench,
   X,
 } from 'lucide-react';
-import { runBrowserHardwareProbe } from '../utils/browserProbe';
+import { copyTextSafe } from '../utils/clipboard';
 import {
   WINDOWS_DIAG_SCRIPT,
   evaluatePcScan,
@@ -28,7 +28,15 @@ import {
 } from '../utils/scanner';
 
 interface ScannerSectionProps {
+  scanData: HardwareScanInput | null;
+  scanning: boolean;
+  progress: number;
+  statusText: string;
+  windowsReport: WindowsDiagReport | null;
+  onStartScan: () => Promise<void>;
+  onWindowsReportChange: (report: WindowsDiagReport | null) => void;
   onApplyRecommendedModules: (moduleIds: string[]) => void;
+  onAddModules?: (moduleIds: string[]) => void;
   onSyncChecklistItems?: (itemIds: string[]) => void;
 }
 
@@ -127,51 +135,41 @@ function FrameCadenceSparkline({ deltas }: { deltas: number[] }) {
 }
 
 export function ScannerSection({
+  scanData,
+  scanning,
+  progress,
+  statusText,
+  windowsReport,
+  onStartScan,
+  onWindowsReportChange,
   onApplyRecommendedModules,
+  onAddModules,
   onSyncChecklistItems,
 }: ScannerSectionProps) {
-  const [scanning, setScanning] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [statusText, setStatusText] = useState('');
-  const [scanData, setScanData] = useState<HardwareScanInput | null>(null);
   const [recFilter, setRecFilter] = useState<RecFilter>('all');
 
   const [deepOpen, setDeepOpen] = useState(false);
   const [diagCopied, setDiagCopied] = useState(false);
   const [rawReport, setRawReport] = useState('');
   const [reportError, setReportError] = useState<string | null>(null);
-  const [windowsReport, setWindowsReport] = useState<WindowsDiagReport | null>(null);
   const [syncedCount, setSyncedCount] = useState<number | null>(null);
   const [appliedNotice, setAppliedNotice] = useState(false);
+  const [addedRecId, setAddedRecId] = useState<string | null>(null);
 
   const evaluation = scanData ? evaluatePcScan({ ...scanData, windowsReport }) : null;
 
   const handleStartScan = async () => {
     if (scanning) return;
-    setScanning(true);
-    setProgress(5);
-    setStatusText('Запуск диагностики оборудования...');
     setAppliedNotice(false);
     setRecFilter('all');
-
-    try {
-      const result = await runBrowserHardwareProbe((pct, text) => {
-        setProgress(pct);
-        setStatusText(text);
-      });
-      setScanData(result);
-    } finally {
-      setScanning(false);
-    }
+    await onStartScan();
   };
 
   const handleCopyDiagScript = async () => {
-    try {
-      await navigator.clipboard.writeText(WINDOWS_DIAG_SCRIPT);
+    const ok = await copyTextSafe(WINDOWS_DIAG_SCRIPT);
+    if (ok) {
       setDiagCopied(true);
       window.setTimeout(() => setDiagCopied(false), 1800);
-    } catch {
-      setDiagCopied(false);
     }
   };
 
@@ -193,7 +191,7 @@ export function ScannerSection({
     }
 
     setReportError(null);
-    setWindowsReport(parsed.report);
+    onWindowsReportChange(parsed.report);
 
     const verifiedIds = getChecklistIdsFromWindowsReport(parsed.report);
     setSyncedCount(verifiedIds.length);
@@ -207,7 +205,7 @@ export function ScannerSection({
   };
 
   const handleClearReport = () => {
-    setWindowsReport(null);
+    onWindowsReportChange(null);
     setSyncedCount(null);
     setRawReport('');
     setReportError(null);
@@ -428,7 +426,7 @@ export function ScannerSection({
                     <span>Подобрать скрипт под ПК</span>
                     <ArrowRight className="w-4 h-4 shrink-0" />
                   </button>
-                  <div className="text-xs text-slate-400 text-center sm:text-right">
+                  <div className="flex flex-wrap items-center justify-center sm:justify-end gap-3 text-xs text-slate-400">
                     {appliedNotice ? (
                       <span className="text-emerald-300 font-medium">
                         Модули отмечены в генераторе ниже ✓
@@ -438,6 +436,15 @@ export function ScannerSection({
                         Рекомендовано модулей: {evaluation.recommendedModuleIds.length}
                       </span>
                     )}
+                    <span className="text-slate-700" aria-hidden="true">
+                      ·
+                    </span>
+                    <a
+                      href="#compare"
+                      className="text-violet-300 hover:text-violet-200 font-medium whitespace-nowrap"
+                    >
+                      Сравнить с другом ↓
+                    </a>
                   </div>
                 </div>
               </div>
@@ -583,9 +590,24 @@ export function ScannerSection({
                           <p className="text-xs text-slate-400 leading-relaxed">{rec.reason}</p>
                         </div>
 
-                        <div className="pt-3 border-t border-slate-800/80 text-xs text-slate-200 leading-relaxed">
-                          <span className="text-cyan-400 font-semibold">Что сделать: </span>
-                          {rec.action}
+                        <div className="pt-3 border-t border-slate-800/80 flex flex-wrap items-end justify-between gap-3 text-xs text-slate-200 leading-relaxed">
+                          <div className="min-w-0 flex-1">
+                            <span className="text-cyan-400 font-semibold">Что сделать: </span>
+                            {rec.action}
+                          </div>
+                          {rec.moduleIds.length > 0 && onAddModules && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setAddedRecId(rec.id);
+                                onAddModules(rec.moduleIds);
+                                window.setTimeout(() => setAddedRecId(null), 2000);
+                              }}
+                              className="px-2.5 py-1 rounded-md bg-slate-800 hover:bg-cyan-400 hover:text-slate-950 text-cyan-300 font-mono text-[11px] font-semibold transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+                            >
+                              {addedRecId === rec.id ? 'Добавлено ✓' : 'В скрипт →'}
+                            </button>
+                          )}
                         </div>
                       </div>
                     );

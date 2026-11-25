@@ -96,12 +96,15 @@ test('parseWindowsDiagReport parses extended OPTICORE JSON and maps checklist it
   assert.equal(bad.ok, false);
 
   const valid = parseWindowsDiagReport(
-    'OPTICORE:{"cpuName":"Ryzen 7 5800X","gpuName":"NVIDIA GeForce RTX 3070","ramTotalGb":32,"ramSpeedMhz":3600,"ramStickCount":2,"powerPlan":"ultimate","gameDvrEnabled":false,"gameModeEnabled":true,"hagsEnabled":true,"mouseAccelEnabled":false,"deliveryOptP2P":false,"ssdFreePercent":45,"tempSizeMb":120,"startupCount":5}',
+    'OPTICORE:{"cpuName":"Ryzen 7 5800X","gpuName":"NVIDIA GeForce RTX 3070","ramTotalGb":32,"ramSpeedMhz":3600,"ramStickCount":2,"powerPlan":"ultimate","gameDvrEnabled":false,"gameModeEnabled":true,"hagsEnabled":true,"mouseAccelEnabled":false,"deliveryOptP2P":false,"ssdFreePercent":45,"tempSizeMb":120,"startupCount":5,"win32PrioritySep38":true,"mpoDisabled":true,"usbPowerSavingOff":true}',
   );
   assert.equal(valid.ok, true);
   if (valid.ok) {
     assert.equal(valid.report.ramTotalGb, 32);
     assert.equal(valid.report.hagsEnabled, true);
+    assert.equal(valid.report.win32PrioritySep38, true);
+    assert.equal(valid.report.mpoDisabled, true);
+    assert.equal(valid.report.usbPowerSavingOff, true);
     const synced = getChecklistIdsFromWindowsReport(valid.report);
     assert.ok(synced.includes('power'));
     assert.ok(synced.includes('xmp'));

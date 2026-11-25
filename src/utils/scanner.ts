@@ -18,6 +18,11 @@ export interface WindowsDiagReport {
   ssdFreePercent?: number;
   tempSizeMb?: number;
   startupCount?: number;
+  win32PrioritySep38?: boolean;
+  mpoDisabled?: boolean;
+  usbPowerSavingOff?: boolean;
+  nagleDisabled?: boolean;
+  hibernationDisabled?: boolean;
 }
 
 export interface HardwareScanInput {
@@ -96,6 +101,15 @@ $ssdFree = if ($sysDrive.Size -gt 0) { [math]::Round(($sysDrive.FreeSpace / $sys
 $tempBytes = ((Get-ChildItem "$env:TEMP","C:\Windows\Temp" -Recurse -Force -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum)
 $tempMb = if ($tempBytes) { [math]::Round($tempBytes / 1MB) } else { 0 }
 $startup = (Get-CimInstance Win32_StartupCommand).Count
+$win32Prio = (Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\PriorityControl" -Name "Win32PrioritySeparation" -ErrorAction SilentlyContinue).Win32PrioritySeparation
+$mpoVal = (Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\Dwm" -Name "OverlayTestMode" -ErrorAction SilentlyContinue).OverlayTestMode
+$usbVal = (Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\USB" -Name "DisableSelectiveSuspend" -ErrorAction SilentlyContinue).DisableSelectiveSuspend
+$hiberVal = (Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Power" -Name "HibernateEnabled" -ErrorAction SilentlyContinue).HibernateEnabled
+$nagleOn = $false
+Get-ChildItem "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces" -ErrorAction SilentlyContinue | ForEach-Object {
+  $p = Get-ItemProperty -Path $_.PSPath -ErrorAction SilentlyContinue
+  if ($p.TCPNoDelay -eq 1 -and $p.TcpAckFrequency -eq 1) { $nagleOn = $true }
+}
 
 $report = [ordered]@{
   cpuName = $cpu
@@ -115,6 +129,11 @@ $report = [ordered]@{
   ssdFreePercent = $ssdFree
   tempSizeMb = [int]$tempMb
   startupCount = [int]$startup
+  win32PrioritySep38 = ($win32Prio -eq 38)
+  mpoDisabled = ($mpoVal -eq 5)
+  usbPowerSavingOff = ($usbVal -eq 1)
+  nagleDisabled = $nagleOn
+  hibernationDisabled = ($hiberVal -eq 0)
 } | ConvertTo-Json -Compress
 
 Write-Output "OPTICORE:$report"
@@ -234,6 +253,11 @@ export function parseWindowsDiagReport(
       ssdFreePercent: readOptNum(parsed.ssdFreePercent),
       tempSizeMb: readOptNum(parsed.tempSizeMb),
       startupCount: readOptNum(parsed.startupCount),
+      win32PrioritySep38: readOptBool(parsed.win32PrioritySep38),
+      mpoDisabled: readOptBool(parsed.mpoDisabled),
+      usbPowerSavingOff: readOptBool(parsed.usbPowerSavingOff),
+      nagleDisabled: readOptBool(parsed.nagleDisabled),
+      hibernationDisabled: readOptBool(parsed.hibernationDisabled),
     };
 
     if (
@@ -419,9 +443,16 @@ export function evaluatePcScan(input: HardwareScanInput): ScanEvaluation {
       reason:
         'В момент замера кадры отрисовывались неравномерно — это признак фоновой нагрузки или энергосбережения.',
       action:
-        'Отключите GameDVR, оверлеи и примените игровые твики реестра (NetworkThrottlingIndex / SystemResponsiveness).',
+        'Отключите GameDVR, оверлеи, MPO (OverlayTestMode=5) и стабилизируйте планировщик Windows.',
       fpsImpact: '+12–20% 1% Low',
-      moduleIds: ['restorePoint', 'ultimatePower', 'gameTweaks', 'disableOverlays'],
+      moduleIds: [
+        'restorePoint',
+        'ultimatePower',
+        'gameTweaks',
+        'disableOverlays',
+        'disableFullscreenOpt',
+        'timerResolutionBcd',
+      ],
     });
   }
 
@@ -557,9 +588,9 @@ export function evaluatePcScan(input: HardwareScanInput): ScanEvaluation {
         title: 'Включён системный троттлинг сети и мультимедиа',
         reason:
           'Стандартные значения NetworkThrottlingIndex и SystemResponsiveness резервируют часть CPU/сети под фоновые задачи.',
-        action: 'Примените твики реестра `gameTweaks` и `gpuPriority`.',
+        action: 'Примените твики реестра `gameTweaks`, `gpuPriority` и `win32PrioritySep`.',
         fpsImpact: '+5–10% стабильности',
-        moduleIds: ['gameTweaks', 'gpuPriority'],
+        moduleIds: ['gameTweaks', 'gpuPriority', 'win32PrioritySep'],
       });
     }
 
@@ -618,9 +649,9 @@ export function evaluatePcScan(input: HardwareScanInput): ScanEvaluation {
             : `Накопилось ${wr.tempSizeMb} МБ временного кэша Temp`,
         reason:
           'При заполнении SSD более чем на 85% падает скорость записи, а старый кэш замедляет подгрузки.',
-        action: 'Очистите %TEMP%, Windows Temp и D3DSCache через модуль очистки.',
+        action: 'Очистите %TEMP%/D3DSCache и при нехватке места отключите гибернацию (hiberfil.sys).',
         fpsImpact: 'Устранение фризов',
-        moduleIds: ['cleanTemp'],
+        moduleIds: ['cleanTemp', 'disableHibernation', 'memoryStorageBoost'],
       });
     }
 
@@ -652,7 +683,9 @@ export function evaluatePcScan(input: HardwareScanInput): ScanEvaluation {
         'cleanTemp',
         'gameTweaks',
         'gpuPriority',
+        'win32PrioritySep',
         'mouseRawInput',
+        'usbPowerSavingOff',
       ],
     });
   }
@@ -664,9 +697,10 @@ export function evaluatePcScan(input: HardwareScanInput): ScanEvaluation {
       priority: 'medium',
       title: `Повышенная сетевая задержка (${input.connectionRttMs} мс)`,
       reason: 'В онлайн-играх высокий пинг ощущается как подёргивания и задержка регистрации.',
-      action: 'Перейдите на кабель Ethernet, сбросьте DNS-кэш и отключите P2P-обновления.',
+      action:
+        'Перейдите на кабель Ethernet, сбросьте DNS-кэш, отключите алгоритм Нагла и P2P-обновления.',
       fpsImpact: 'Ниже пинг',
-      moduleIds: ['dnsFlush', 'disableP2PUpdate'],
+      moduleIds: ['dnsFlush', 'disableP2PUpdate', 'nagleDisable'],
     });
   }
 
