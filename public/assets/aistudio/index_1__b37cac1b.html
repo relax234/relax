@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="ru" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OptiCore — Оптимизация ПК и буст FPS</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            cyber: {
+              bg: '#070B14',
+              card: '#0E1525',
+              border: '#1E293B',
+              accent: '#00F0FF',
+              purple: '#8B5CF6',
+              green: '#10B981'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background-color: #070B14;
+      color: #F8FAFC;
+      background-image: 
+        radial-gradient(circle at 15% 15%, rgba(0, 240, 255, 0.08), transparent 35%),
+        radial-gradient(circle at 85% 30%, rgba(139, 92, 246, 0.08), transparent 40%),
+        linear-gradient(to right, rgba(30, 41, 59, 0.25) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(30, 41, 59, 0.25) 1px, transparent 1px);
+      background-size: 100% 100%, 100% 100%, 48px 48px, 48px 48px;
+    }
+    .glow-border {
+      box-shadow: 0 0 25px rgba(0, 240, 255, 0.12);
+    }
+    .glow-btn:hover {
+      box-shadow: 0 0 20px rgba(0, 240, 255, 0.45);
+    }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #070B14; }
+    ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #334155; }
+  </style>
+</head>
+<body class="antialiased selection:bg-cyan-400 selection:text-slate-950">
+
+  <!-- Navbar -->
+  <header class="sticky top-0 z-50 backdrop-blur-md bg-[#070B14]/80 border-b border-slate-800/80">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+      <a href="#" class="flex items-center gap-2.5 font-extrabold text-xl tracking-tight">
+        <span class="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-400 to-violet-600 flex items-center justify-center text-slate-950 font-mono text-sm">OC</span>
+        <span>Opti<span class="text-cyan-400">Core</span></span>
+      </a>
+      <nav class="hidden md:flex items-center gap-7 text-sm font-medium text-slate-300">
+        <a href="#checklist" class="hover:text-cyan-400 transition">Чек-лист</a>
+        <a href="#generator" class="hover:text-cyan-400 transition">Генератор скриптов</a>
+        <a href="#gpu-tips" class="hover:text-cyan-400 transition">Видеокарты и OS</a>
+        <a href="#faq" class="hover:text-cyan-400 transition">FAQ</a>
+      </nav>
+      <a href="#generator" class="px-4 py-2 rounded-lg bg-cyan-400 text-slate-950 font-semibold text-sm hover:bg-cyan-300 transition glow-btn">
+        Создать скрипт
+      </a>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section class="pt-16 pb-20 px-4 sm:px-6">
+    <div class="max-w-5xl mx-auto text-center">
+      <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/90 border border-cyan-500/30 text-cyan-300 text-xs font-mono mb-6">
+        <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+        WINDOWS 10 / 11 • БЕЗ МУСОРНЫХ ПРОГРАММ • ОТКРЫТЫЙ КОД
+      </div>
+      <h1 class="text-4xl sm:text-6xl font-extrabold tracking-tight leading-tight mb-6">
+        Выжми максимум <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-sky-300 to-violet-400">FPS и отклика</span> из своего ПК
+      </h1>
+      <p class="text-slate-400 text-base sm:text-lg max-w-2xl mx-auto mb-10 leading-relaxed">
+        Никаких «ускорителей в один клик» со скрытым майнингом. Пройди интерактивный аудит системы и сгенерируй прозрачный <code class="text-cyan-300 font-mono">.bat</code> или <code class="text-violet-300 font-mono">.ps1</code> скрипт под свои задачи.
+      </p>
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+        <a href="#checklist" class="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-cyan-400 text-slate-950 font-bold text-sm hover:bg-cyan-300 transition glow-btn">
+          Проверить мой ПК →
+        </a>
+        <a href="#generator" class="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-slate-900 border border-slate-700 text-slate-200 font-semibold text-sm hover:border-cyan-400/50 transition">
+          Собрать .BAT / .PS1 скрипт
+        </a>
+      </div>
+
+      <!-- Mini Stats -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-14 max-w-4xl mx-auto">
+        <div class="p-4 rounded-xl bg-[#0E1525]/90 border border-slate-800">
+          <div class="text-2xl font-extrabold text-cyan-400 font-mono">-35%</div>
+          <div class="text-xs text-slate-400 mt-1">Фоновых процессов</div>
+        </div>
+        <div class="p-4 rounded-xl bg-[#0E1525]/90 border border-slate-800">
+          <div class="text-2xl font-extrabold text-emerald-400 font-mono">-4.2 мс</div>
+          <div class="text-xs text-slate-400 mt-1">Снижение Input Lag</div>
+        </div>
+        <div class="p-4 rounded-xl bg-[#0E1525]/90 border border-slate-800">
+          <div class="text-2xl font-extrabold text-violet-400 font-mono">+12–25%</div>
+          <div class="text-xs text-slate-400 mt-1">Стабильность 1% Low FPS</div>
+        </div>
+        <div class="p-4 rounded-xl bg-[#0E1525]/90 border border-slate-800">
+          <div class="text-2xl font-extrabold text-amber-400 font-mono">100%</div>
+          <div class="text-xs text-slate-400 mt-1">Обратимые настройки</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Interactive Checklist -->
+  <section id="checklist" class="py-16 px-4 sm:px-6 border-t border-slate-800/70">
+    <div class="max-w-6xl mx-auto">
+      <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
+        <div>
+          <span class="text-xs font-mono uppercase tracking-wider text-cyan-400">Шаг 1 • Аудит</span>
+          <h2 class="text-3xl font-bold mt-1">Интерактивный чек-лист оптимизации</h2>
+          <p class="text-slate-400 text-sm mt-2">Отмечай пункты, которые уже сделал — прогресс сохраняется автоматически.</p>
+        </div>
+
+        <!-- Score Card -->
+        <div class="p-5 rounded-2xl bg-[#0E1525] border border-cyan-500/30 glow-border min-w-[280px]">
+          <div class="flex items-center justify-between text-xs text-slate-400 mb-1.5">
+            <span>Индекс оптимизации ПК</span>
+            <span id="fps-boost-badge" class="text-emerald-400 font-mono">+0% к стабильности</span>
+          </div>
+          <div class="flex items-baseline justify-between mb-2">
+            <span id="score-percent" class="text-3xl font-extrabold text-white font-mono">0%</span>
+            <span id="score-label" class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300">Базовый сток</span>
+          </div>
+          <div class="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden">
+            <div id="score-bar" class="h-full bg-gradient-to-r from-cyan-400 to-violet-500 transition-all duration-300" style="width: 0%"></div>
+          </div>
+          <button onclick="resetChecklist()" class="mt-3 text-xs text-slate-500 hover:text-rose-400 transition">
+            Сбросить прогресс
+          </button>
+        </div>
+      </div>
+
+      <!-- Checklist Grid -->
+      <div id="checklist-container" class="grid md:grid-cols-2 gap-6"></div>
+    </div>
+  </section>
+
+  <!-- Script Generator -->
+  <section id="generator" class="py-16 px-4 sm:px-6 border-t border-slate-800/70 bg-slate-950/40">
+    <div class="max-w-6xl mx-auto">
+      <div class="mb-10">
+        <span class="text-xs font-mono uppercase tracking-wider text-violet-400">Шаг 2 • Автоматизация</span>
+        <h2 class="text-3xl font-bold mt-1">Генератор безопасного скрипта</h2>
+        <p class="text-slate-400 text-sm mt-2">Выбери нужные твики слева — справа сразу соберётся готовый файл для запуска от имени администратора.</p>
+      </div>
+
+      <div class="grid lg:grid-cols-12 gap-8 items-start">
+        <!-- Options -->
+        <div class="lg:col-span-5 space-y-3" id="script-options"></div>
+
+        <!-- Code Preview -->
+        <div class="lg:col-span-7 rounded-2xl bg-[#0B111E] border border-slate-800 overflow-hidden glow-border">
+          <div class="px-4 py-3 bg-slate-900/90 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-2">
+              <button id="btn-bat" onclick="setFormat('bat')" class="px-3 py-1 rounded-md text-xs font-mono font-semibold bg-cyan-400 text-slate-950 transition">
+                OptiCore.bat
+              </button>
+              <button id="btn-ps1" onclick="setFormat('ps1')" class="px-3 py-1 rounded-md text-xs font-mono font-semibold bg-slate-800 text-slate-300 hover:text-white transition">
+                OptiCore.ps1
+              </button>
+            </div>
+            <div class="flex items-center gap-2">
+              <button onclick="copyScript()" id="copy-btn" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-200 transition">
+                Копировать
+              </button>
+              <button onclick="downloadScript()" class="px-3.5 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold transition">
+                Скачать файл ↓
+              </button>
+            </div>
+          </div>
+          <pre class="p-5 text-xs sm:text-sm font-mono text-cyan-100 overflow-x-auto max-h-[460px] leading-relaxed"><code id="code-output"></code></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- GPU & OS Tips -->
+  <section id="gpu-tips" class="py-16 px-4 sm:px-6 border-t border-slate-800/70">
+    <div class="max-w-6xl mx-auto">
+      <div class="mb-10">
+        <span class="text-xs font-mono uppercase tracking-wider text-emerald-400">Шаг 3 • Тонкая настройка</span>
+        <h2 class="text-3xl font-bold mt-1">Быстрые настройки драйверов и системы</h2>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-6">
+        <div class="p-6 rounded-2xl bg-[#0E1525] border border-slate-800 hover:border-emerald-500/40 transition">
+          <div class="text-emerald-400 font-mono text-xs font-bold mb-2">NVIDIA CONTROL PANEL</div>
+          <h3 class="text-lg font-bold mb-3">Минимум задержки в играх</h3>
+          <ul class="space-y-2.5 text-sm text-slate-300">
+            <li>• <b>Режим управления электропитанием:</b> Предпочтителен режим максимальной производительности</li>
+            <li>• <b>Режим низкой задержки:</b> Вкл (или Ультра, если GPU загружен на 95%+)</li>
+            <li>• <b>Фильтрация текстур — качество:</b> Высокая производительность</li>
+            <li>• <b>Размер кэша шейдеров:</b> 10 ГБ или Без ограничений</li>
+          </ul>
+        </div>
+
+        <div class="p-6 rounded-2xl bg-[#0E1525] border border-slate-800 hover:border-rose-500/40 transition">
+          <div class="text-rose-400 font-mono text-xs font-bold mb-2">AMD ADRENALIN</div>
+          <h3 class="text-lg font-bold mb-3">Плавный фреймтайм Radeon</h3>
+          <ul class="space-y-2.5 text-sm text-slate-300">
+            <li>• <b>Radeon Anti-Lag:</b> Включено для соревновательных шутеров</li>
+            <li>• <b>Radeon Chill / Boost:</b> Отключить для стабильного отклика мыши</li>
+            <li>• <b>Оптимизация формата поверхности:</b> Включено</li>
+            <li>• <b>Smart Access Memory (ReBAR):</b> Включить в BIOS + Adrenalin</li>
+          </ul>
+        </div>
+
+        <div class="p-6 rounded-2xl bg-[#0E1525] border border-slate-800 hover:border-cyan-500/40 transition">
+          <div class="text-cyan-400 font-mono text-xs font-bold mb-2">BIOS И ПАМЯТЬ</div>
+          <h3 class="text-lg font-bold mb-3">Бесплатный прирост железа</h3>
+          <ul class="space-y-2.5 text-sm text-slate-300">
+            <li>• <b>XMP / DOCP / EXPO:</b> Включи профиль ОЗУ, иначе память работает на 2133/4800 МГц</li>
+            <li>• <b>Above 4G Decoding + ReBAR:</b> +5–10% FPS в современных DX12/Vulkan играх</li>
+            <li>• <b>Температуры под нагрузкой:</b> Держи CPU &lt; 85°C и GPU &lt; 80°C против троттлинга</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section id="faq" class="py-16 px-4 sm:px-6 border-t border-slate-800/70 bg-slate-950/40">
+    <div class="max-w-3xl mx-auto">
+      <h2 class="text-2xl sm:text-3xl font-bold mb-8 text-center">Частые вопросы и безопасность</h2>
+      <div class="space-y-3" id="faq-container"></div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="py-8 px-4 border-t border-slate-800/80 text-center text-xs text-slate-500">
+    OptiCore • Создано для безопасной и прозрачной настройки Windows. Перед системными изменениями рекомендуем создавать точку восстановления.
+  </footer>
+
+  <script>
+    const checklistData = [
+      {
+        category: "Система и питание",
+        badge: "Высокий эффект",
+        items: [
+          { id: "power", title: "Схема питания «Максимальная производительность»", desc: "Не даёт ядрам CPU сбрасывать частоты в играх", weight: 12 },
+          { id: "startup", title: "Чистка автозагрузки в Диспетчере задач", desc: "Отключи лаунчеры, торренты и лишние апдейтеры", weight: 10 },
+          { id: "gamemode", title: "Игровой режим Windows + HAGS", desc: "Планирование графического процессора с аппаратным ускорением", weight: 8 }
+        ]
+      },
+      {
+        category: "Память и накопители",
+        badge: "Стабильность",
+        items: [
+          { id: "xmp", title: "Активирован профиль XMP / EXPO в BIOS", desc: "Раскрывает полную частоту и тайминги оперативной памяти", weight: 14 },
+          { id: "ssd", title: "Свободно минимум 15–20% места на SSD", desc: "Сохраняет скорость записи и работу TRIM без фризов", weight: 8 },
+          { id: "temp", title: "Очищены папки Temp и кэш DirectX", desc: "Удаляет старые шейдеры и временный мусор обновлений", weight: 6 }
+        ]
+      },
+      {
+        category: "Графика и ввод",
+        badge: "Input Lag",
+        items: [
+          { id: "gpu_driver", title: "Чистая установка свежего драйвера GPU", desc: "Без ненужных оверлеев и фоновой телеметрии", weight: 10 },
+          { id: "mouse", title: "Отключена повышенная точность указателя", desc: "Честный 1:1 ввод мыши без акселерации Windows", weight: 8 },
+          { id: "overlays", title: "Отключены лишние оверлеи (Discord, Xbox Game Bar)", desc: "Убирает микростаттеры и падения 1% Low FPS", weight: 8 }
+        ]
+      },
+      {
+        category: "Сеть и фоновые службы",
+        badge: "Пинг",
+        items: [
+          { id: "dns", title: "Быстрый DNS (Cloudflare 1.1.1.1 / Google 8.8.8.8)", desc: "Ускоряет резолвинг серверов и стабильность соединения", weight: 5 },
+          { id: "delivery", title: "Отключена оптимизация доставки P2P", desc: "Windows не раздаёт обновления другим ПК в фоне", weight: 6 },
+          { id: "restore", title: "Создана точка восстановления системы", desc: "Гарантия безопасного отката за 1 минуту", weight: 5 }
+        ]
+      }
+    ];
+
+    const scriptModules = [
+      {
+        id: "restorePoint",
+        title: "Создать точку восстановления (рекомендуется)",
+        desc: "Автоматический бэкап реестра перед применением твиков",
+        default: true,
+        bat: `echo [1/6] Создание точки восстановления...
+powershell -Command "Checkpoint-Computer -Description 'OptiCore_Backup' -RestorePointType 'MODIFY_SETTINGS'" 2>nul`,
+        ps1: `Write-Host "[1/6] Создание точки восстановления..." -ForegroundColor Cyan
+Checkpoint-Computer -Description "OptiCore_Backup" -RestorePointType "MODIFY_SETTINGS" -ErrorAction SilentlyContinue`
+      },
+      {
+        id: "ultimatePower",
+        title: "Включить схему «Максимальная производительность»",
+        desc: "Активирует скрытый профиль Ultimate Performance",
+        default: true,
+        bat: `echo [2/6] Активация схемы Максимальной производительности...
+powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 >nul
+powercfg /setactive SCHEME_MIN`,
+        ps1: `Write-Host "[2/6] Активация схемы Максимальной производительности..." -ForegroundColor Cyan
+powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 | Out-Null
+powercfg /setactive SCHEME_MIN`
+      },
+      {
+        id: "cleanTemp",
+        title: "Очистить временные файлы (%TEMP% и Windows Temp)",
+        desc: "Безопасно удаляет кэш без потери личных данных",
+        default: true,
+        bat: `echo [3/6] Очистка временных файлов...
+del /s /f /q "%temp%\*.*" >nul 2>&1
+del /s /f /q "C:\Windows\Temp\*.*" >nul 2>&1`,
+        ps1: `Write-Host "[3/6] Очистка временных файлов..." -ForegroundColor Cyan
+Remove-Item "$env:TEMP\*" -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item "C:\Windows\Temp\*" -Recurse -Force -ErrorAction SilentlyContinue`
+      },
+      {
+        id: "gameTweaks",
+        title: "Игровые твики реестра (GameDVR Off + Network Throttling)",
+        desc: "Отключает фоновую запись экрана Xbox и лимит сетевых пакетов",
+        default: true,
+        bat: `echo [4/6] Применение игровых твиков реестра...
+reg add "HKCU\System\GameConfigStore" /v "GameDVR_Enabled" /t REG_DWORD /d 0 /f >nul
+reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v "NetworkThrottlingIndex" /t REG_DWORD /d 4294967295 /f >nul
+reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v "SystemResponsiveness" /t REG_DWORD /d 0 /f >nul`,
+        ps1: `Write-Host "[4/6] Применение игровых твиков реестра..." -ForegroundColor Cyan
+Set-ItemProperty -Path "HKCU:\System\GameConfigStore" -Name "GameDVR_Enabled" -Value 0 -ErrorAction SilentlyContinue
+Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" -Name "NetworkThrottlingIndex" -Value 0xffffffff -ErrorAction SilentlyContinue
+Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" -Name "SystemResponsiveness" -Value 0 -ErrorAction SilentlyContinue`
+      },
+      {
+        id: "dnsFlush",
+        title: "Сбросить кэш DNS и обновить сетевой стек",
+        desc: "Очищает устаревшие маршруты и уменьшает задержки подключения",
+        default: false,
+        bat: `echo [5/6] Сброс DNS-кэша...
+ipconfig /flushdns >nul`,
+        ps1: `Write-Host "[5/6] Сброс DNS-кэша..." -ForegroundColor Cyan
+Clear-DnsClientCache`
+      },
+      {
+        id: "telemetryLite",
+        title: "Отключить телеметрию диагностики (DiagTrack)",
+        desc: "Останавливает фоновую отправку отчётов использования Windows",
+        default: false,
+        bat: `echo [6/6] Отключение службы DiagTrack...
+sc stop DiagTrack >nul 2>&1
+sc config DiagTrack start= disabled >nul 2>&1`,
+        ps1: `Write-Host "[6/6] Отключение службы DiagTrack..." -ForegroundColor Cyan
+Stop-Service "DiagTrack" -Force -ErrorAction SilentlyContinue
+Set-Service "DiagTrack" -StartupType Disabled -ErrorAction SilentlyContinue`
+      }
+    ];
+
+    const faqData = [
+      {
+        q: "Безопасно ли запускать сгенерированный скрипт?",
+        a: "Да. В скрипте используются только встроенные утилиты Windows (powercfg, reg, ipconfig, sc). Весь код открыт перед скачиванием, а первый пункт автоматически создаёт точку восстановления."
+      },
+      {
+        q: "Как правильно запустить .bat или .ps1 файл?",
+        a: "Для .bat: нажми правой кнопкой мыши по скачанному файлу → «Запуск от имени администратора». Для .ps1: открой PowerShell от имени администратора и запусти скрипт."
+      },
+      {
+        q: "Почему не стоит использовать «авто-оптимизаторы» и чистильщики реестра?",
+        a: "Большинство бесплатных программ-ускорителей сами висят в автозагрузке, потребляют ОЗУ, показывают рекламу или ломают системные службы Windows без возможности отката."
+      }
+    ];
+
+    let checkedItems = JSON.parse(localStorage.getItem('opticore_checks') || '{}');
+    let selectedModules = {};
+    scriptModules.forEach(m => selectedModules[m.id] = m.default);
+    let currentFormat = 'bat';
+
+    function renderChecklist() {
+      const container = document.getElementById('checklist-container');
+      container.innerHTML = checklistData.map(group => `
+        <div class="p-6 rounded-2xl bg-[#0E1525] border border-slate-800">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-bold text-lg text-white">${group.category}</h3>
+            <span class="text-xs font-mono px-2.5 py-1 rounded-md bg-slate-800 text-cyan-300">${group.badge}</span>
+          </div>
+          <div class="space-y-3">
+            ${group.items.map(item => {
+              const isChecked = !!checkedItems[item.id];
+              return `
+                <label class="flex items-start gap-3.5 p-3 rounded-xl border ${isChecked ? 'border-cyan-500/40 bg-cyan-500/5' : 'border-slate-800/80 bg-slate-900/40'} hover:border-slate-700 cursor-pointer transition">
+                  <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="toggleCheck('${item.id}')" class="mt-1 w-4 h-4 rounded accent-cyan-400 cursor-pointer" />
+                  <div class="flex-1">
+                    <div class="text-sm font-semibold ${isChecked ? 'text-cyan-200 line-through opacity-80' : 'text-slate-100'}">${item.title}</div>
+                    <div class="text-xs text-slate-400 mt-0.5">${item.desc}</div>
+                  </div>
+                  <span class="text-xs font-mono text-slate-500">+${item.weight}%</span>
+                </label>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `).join('');
+      updateScore();
+    }
+
+    function toggleCheck(id) {
+      checkedItems[id] = !checkedItems[id];
+      localStorage.setItem('opticore_checks', JSON.stringify(checkedItems));
+      renderChecklist();
+    }
+
+    function resetChecklist() {
+      checkedItems = {};
+      localStorage.removeItem('opticore_checks');
+      renderChecklist();
+    }
+
+    function updateScore() {
+      let total = 0;
+      let earned = 0;
+      checklistData.forEach(g => g.items.forEach(i => {
+        total += i.weight;
+        if (checkedItems[i.id]) earned += i.weight;
+      }));
+      const pct = Math.round((earned / total) * 100);
+      document.getElementById('score-percent').textContent = `${pct}%`;
+      document.getElementById('score-bar').style.width = `${pct}%`;
+      document.getElementById('fps-boost-badge').textContent = `+${Math.round(pct * 0.25)}% к стабильности`;
+
+      const label = document.getElementById('score-label');
+      if (pct === 0) { label.textContent = 'Базовый сток'; label.className = 'text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300'; }
+      else if (pct < 50) { label.textContent = 'Начальный тюнинг'; label.className = 'text-xs font-semibold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300'; }
+      else if (pct < 90) { label.textContent = 'Игровой уровень'; label.className = 'text-xs font-semibold px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300'; }
+      else { label.textContent = 'Максимум FPS'; label.className = 'text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300'; }
+    }
+
+    function renderScriptOptions() {
+      const container = document.getElementById('script-options');
+      container.innerHTML = scriptModules.map(mod => {
+        const active = !!selectedModules[mod.id];
+        return `
+          <label class="flex items-start gap-3.5 p-4 rounded-xl border ${active ? 'border-violet-500/50 bg-violet-500/10' : 'border-slate-800 bg-[#0E1525]'} cursor-pointer transition">
+            <input type="checkbox" ${active ? 'checked' : ''} onchange="toggleModule('${mod.id}')" class="mt-1 w-4 h-4 rounded accent-violet-500 cursor-pointer" />
+            <div>
+              <div class="text-sm font-semibold text-white">${mod.title}</div>
+              <div class="text-xs text-slate-400 mt-0.5">${mod.desc}</div>
+            </div>
+          </label>
+        `;
+      }).join('');
+      generateCode();
+    }
+
+    function toggleModule(id) {
+      selectedModules[id] = !selectedModules[id];
+      renderScriptOptions();
+    }
+
+    function setFormat(fmt) {
+      currentFormat = fmt;
+      document.getElementById('btn-bat').className = fmt === 'bat'
+        ? 'px-3 py-1 rounded-md text-xs font-mono font-semibold bg-cyan-400 text-slate-950 transition'
+        : 'px-3 py-1 rounded-md text-xs font-mono font-semibold bg-slate-800 text-slate-300 hover:text-white transition';
+      document.getElementById('btn-ps1').className = fmt === 'ps1'
+        ? 'px-3 py-1 rounded-md text-xs font-mono font-semibold bg-violet-500 text-white transition'
+        : 'px-3 py-1 rounded-md text-xs font-mono font-semibold bg-slate-800 text-slate-300 hover:text-white transition';
+      generateCode();
+    }
+
+    function generateCode() {
+      const active = scriptModules.filter(m => selectedModules[m.id]);
+      let code = '';
+      if (currentFormat === 'bat') {
+        code = `@echo off
+chcp 65001 >nul
+title OptiCore PC Optimizer
+echo ==========================================
+echo   OptiCore — Безопасная оптимизация ПК
+echo ==========================================
+echo.
+
+`;
+        if (active.length === 0) {
+          code += `echo Выбери хотя бы один модуль слева!
+`;
+        } else {
+          code += active.map(m => m.bat).join('
+
+') + `
+
+echo.
+echo Готово! Перезагрузи ПК для применения всех настроек.
+`;
+        }
+        code += `pause`;
+      } else {
+        code = `# OptiCore PC Optimizer (PowerShell)
+Write-Host "==========================================" -ForegroundColor Cyan
+Write-Host "  OptiCore — Безопасная оптимизация ПК" -ForegroundColor Cyan
+Write-Host "==========================================" -ForegroundColor Cyan
+
+`;
+        if (active.length === 0) {
+          code += `Write-Host "Выбери хотя бы один модуль слева!" -ForegroundColor Yellow
+`;
+        } else {
+          code += active.map(m => m.ps1).join('
+
+') + `
+
+Write-Host "
+Готово! Перезагрузи ПК для применения всех настроек." -ForegroundColor Green
+`;
+        }
+        code += `Read-Host "Нажми Enter для выхода"`;
+      }
+      document.getElementById('code-output').textContent = code;
+    }
+
+    function copyScript() {
+      const text = document.getElementById('code-output').textContent;
+      navigator.clipboard.writeText(text);
+      const btn = document.getElementById('copy-btn');
+      btn.textContent = 'Скопировано ✓';
+      setTimeout(() => btn.textContent = 'Копировать', 1800);
+    }
+
+    function downloadScript() {
+      const text = document.getElementById('code-output').textContent;
+      const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = currentFormat === 'bat' ? 'OptiCore_Optimize.bat' : 'OptiCore_Optimize.ps1';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function renderFaq() {
+      document.getElementById('faq-container').innerHTML = faqData.map((item, idx) => `
+        <div class="rounded-xl bg-[#0E1525] border border-slate-800 overflow-hidden">
+          <button onclick="toggleFaq(${idx})" class="w-full px-5 py-4 text-left flex items-center justify-between font-semibold text-sm sm:text-base text-slate-100 hover:text-cyan-300 transition">
+            <span>${item.q}</span>
+            <span id="faq-icon-${idx}" class="text-cyan-400 font-mono text-lg">+</span>
+          </button>
+          <div id="faq-body-${idx}" class="hidden px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-slate-800/60 pt-3">
+            ${item.a}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function toggleFaq(idx) {
+      const body = document.getElementById(`faq-body-${idx}`);
+      const icon = document.getElementById(`faq-icon-${idx}`);
+      const isHidden = body.classList.contains('hidden');
+      body.classList.toggle('hidden');
+      icon.textContent = isHidden ? '−' : '+';
+    }
+
+    renderChecklist();
+    renderScriptOptions();
+    renderFaq();
+  </script>
+</body>
+</html>

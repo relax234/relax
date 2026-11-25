@@ -1,0 +1,6 @@
+{
+  "name": "OptiCore — Оптимизация ПК и буст FPS",
+  "description": "Интерактивный чек-лист оптимизации Windows 10/11 и генератор прозрачных .bat и .ps1 скриптов для повышения FPS и снижения задержек.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
