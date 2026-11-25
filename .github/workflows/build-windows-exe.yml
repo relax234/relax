@@ -25,13 +25,13 @@ jobs:
       - name: Install web dependencies & build bundle
         shell: pwsh
         run: |
-          npm install
+          npm install --legacy-peer-deps
           npm run build
 
       - name: Install Electron dependencies
         shell: pwsh
         working-directory: electron
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: Configure GitHub auto-updater repository metadata
         shell: pwsh
