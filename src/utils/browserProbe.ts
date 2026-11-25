@@ -4,38 +4,60 @@ interface NavigatorExtended extends Navigator {
   deviceMemory?: number;
   connection?: {
     rtt?: number;
+    effectiveType?: string;
   };
   userAgentData?: {
     platform?: string;
   };
+  getBattery?: () => Promise<{
+    charging: boolean;
+    level: number;
+  }>;
 }
 
-function detectWebGlGpu(): { renderer: string; vendor: string } {
+function detectWebGlInfo(): {
+  renderer: string;
+  vendor: string;
+  webgl2Supported: boolean;
+  maxTextureSize: number | null;
+} {
   try {
     const canvas = document.createElement('canvas');
-    const gl =
-      (canvas.getContext('webgl2') as WebGL2RenderingContext | null) ||
-      (canvas.getContext('webgl') as WebGLRenderingContext | null);
+    const gl2 = canvas.getContext('webgl2') as WebGL2RenderingContext | null;
+    const gl = gl2 || (canvas.getContext('webgl') as WebGLRenderingContext | null);
 
     if (!gl) {
-      return { renderer: 'Не определена', vendor: '' };
+      return {
+        renderer: 'Не определена',
+        vendor: '',
+        webgl2Supported: false,
+        maxTextureSize: null,
+      };
     }
 
+    const maxTextureSize = Number(gl.getParameter(gl.MAX_TEXTURE_SIZE)) || null;
     const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
     if (debugInfo) {
       const renderer = String(gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) || '');
       const vendor = String(gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL) || '');
       if (renderer) {
-        return { renderer, vendor };
+        return { renderer, vendor, webgl2Supported: !!gl2, maxTextureSize };
       }
     }
 
     return {
       renderer: String(gl.getParameter(gl.RENDERER) || 'Не определена'),
       vendor: String(gl.getParameter(gl.VENDOR) || ''),
+      webgl2Supported: !!gl2,
+      maxTextureSize,
     };
   } catch {
-    return { renderer: 'Не определена', vendor: '' };
+    return {
+      renderer: 'Не определена',
+      vendor: '',
+      webgl2Supported: false,
+      maxTextureSize: null,
+    };
   }
 }
 
@@ -116,15 +138,72 @@ function measureDisplayCadence(): Promise<{
   });
 }
 
+function measureEventLoopLag(): Promise<number> {
+  return new Promise((resolve) => {
+    if (typeof MessageChannel === 'undefined') {
+      resolve(0.2);
+      return;
+    }
+
+    const channel = new MessageChannel();
+    const samples: number[] = [];
+    let count = 0;
+    let start = performance.now();
+
+    channel.port1.onmessage = () => {
+      const lag = Math.max(0, performance.now() - start);
+      samples.push(lag);
+      count += 1;
+
+      if (count < 12) {
+        start = performance.now();
+        channel.port2.postMessage(null);
+      } else {
+        channel.port1.close();
+        channel.port2.close();
+        const avg = samples.reduce((a, b) => a + b, 0) / samples.length;
+        resolve(Number(avg.toFixed(2)));
+      }
+    };
+
+    channel.port2.postMessage(null);
+  });
+}
+
+async function detectBatteryStatus(): Promise<{
+  onBattery: boolean | null;
+  batteryLevelPercent: number | null;
+}> {
+  const nav = navigator as NavigatorExtended;
+  if (typeof nav.getBattery !== 'function') {
+    return { onBattery: null, batteryLevelPercent: null };
+  }
+  try {
+    const battery = await Promise.race([
+      nav.getBattery(),
+      new Promise<null>((resolve) => window.setTimeout(() => resolve(null), 400)),
+    ]);
+    if (!battery) {
+      return { onBattery: null, batteryLevelPercent: null };
+    }
+    return {
+      onBattery: !battery.charging,
+      batteryLevelPercent: Math.round((battery.level ?? 1) * 100),
+    };
+  } catch {
+    return { onBattery: null, batteryLevelPercent: null };
+  }
+}
+
 export async function runBrowserHardwareProbe(
   onStep: (progress: number, statusText: string) => void,
 ): Promise<HardwareScanInput> {
   const nav = navigator as NavigatorExtended;
 
-  onStep(15, 'Определение видеокарты через WebGL...');
-  const gpu = detectWebGlGpu();
+  onStep(15, 'Определение видеокарты, WebGL2 и текстурного буфера...');
+  const gpu = detectWebGlInfo();
 
-  onStep(40, 'Анализ потоков CPU, памяти и экрана...');
+  onStep(35, 'Анализ потоков CPU, ОЗУ, батареи и сети...');
   const cpuCores = navigator.hardwareConcurrency || 4;
   const deviceMemoryGb =
     typeof nav.deviceMemory === 'number' && Number.isFinite(nav.deviceMemory)
@@ -138,23 +217,32 @@ export async function runBrowserHardwareProbe(
     typeof nav.connection?.rtt === 'number' && Number.isFinite(nav.connection.rtt)
       ? nav.connection.rtt
       : null;
+  const battery = await detectBatteryStatus();
 
-  onStep(70, 'Замер герцовки дисплея и стабильности фреймтайма...');
+  onStep(60, 'Замер задержки планировщика событий (Input Lag)...');
+  const eventLoopLagMs = await measureEventLoopLag();
+
+  onStep(82, 'Замер герцовки дисплея и стабильности фреймтайма...');
   const cadence = await measureDisplayCadence();
 
-  onStep(100, 'Формирование отчёта и рекомендаций FPS...');
+  onStep(100, 'Формирование подробного отчёта и списка твиков...');
 
   return {
     cpuCores,
     deviceMemoryGb,
     gpuRenderer: gpu.renderer,
     gpuVendorRaw: gpu.vendor,
+    webgl2Supported: gpu.webgl2Supported,
+    maxTextureSize: gpu.maxTextureSize,
     screenWidth,
     screenHeight,
     measuredHz: cadence.measuredHz,
     avgFrameMs: cadence.avgFrameMs,
     frameJitterMs: cadence.frameJitterMs,
     frameDeltas: cadence.deltas,
+    eventLoopLagMs,
+    onBattery: battery.onBattery,
+    batteryLevelPercent: battery.batteryLevelPercent,
     osName,
     isWindows,
     connectionRttMs,

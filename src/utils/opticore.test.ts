@@ -27,6 +27,12 @@ test('calculateOptimizationScore reaches 100% and +25% stability when all items 
   assert.equal(result.label, 'Максимум FPS');
 });
 
+test('SCRIPT_MODULES contains 12 categorized tweaks with unique IDs', () => {
+  assert.equal(SCRIPT_MODULES.length, 12);
+  const ids = new Set(SCRIPT_MODULES.map((m) => m.id));
+  assert.equal(ids.size, 12);
+});
+
 test('generateOptimizationScript builds valid .bat script with Windows paths preserved', () => {
   const defaults: Record<string, boolean> = {};
   for (const mod of SCRIPT_MODULES) {
@@ -40,11 +46,19 @@ test('generateOptimizationScript builds valid .bat script with Windows paths pre
   assert.doesNotMatch(bat, /ipconfig \/flushdns/);
 });
 
-test('generateOptimizationScript builds valid .ps1 script and handles empty selection', () => {
+test('generateOptimizationScript builds valid .ps1 script including new gaming and input tweaks', () => {
   const emptyPs1 = generateOptimizationScript('ps1', {});
   assert.match(emptyPs1, /Выбери хотя бы один модуль слева!/);
 
-  const dnsPs1 = generateOptimizationScript('ps1', { dnsFlush: true });
-  assert.match(dnsPs1, /Clear-DnsClientCache/);
-  assert.match(dnsPs1, /Read-Host/);
+  const fullPs1 = generateOptimizationScript('ps1', {
+    dnsFlush: true,
+    gpuPriority: true,
+    hagsAndGameMode: true,
+    mouseRawInput: true,
+  });
+  assert.match(fullPs1, /Clear-DnsClientCache/);
+  assert.match(fullPs1, /GPU Priority/);
+  assert.match(fullPs1, /HwSchMode/);
+  assert.match(fullPs1, /MouseSpeed/);
+  assert.match(fullPs1, /Read-Host/);
 });

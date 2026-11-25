@@ -88,12 +88,26 @@ export default function App() {
     }
   };
 
+  const handleSyncChecklistItems = (itemIds: string[]) => {
+    if (itemIds.length === 0) return;
+    setCheckedItems((prev) => {
+      const next = { ...prev };
+      for (const id of itemIds) {
+        next[id] = true;
+      }
+      return next;
+    });
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
       <main className="flex-1">
         <HeroSection />
-        <ScannerSection onApplyRecommendedModules={handleApplyRecommendedModules} />
+        <ScannerSection
+          onApplyRecommendedModules={handleApplyRecommendedModules}
+          onSyncChecklistItems={handleSyncChecklistItems}
+        />
         <ChecklistSection
           checkedItems={checkedItems}
           onToggleCheck={handleToggleCheck}

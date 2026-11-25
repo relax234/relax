@@ -20,6 +20,7 @@ import { runBrowserHardwareProbe } from '../utils/browserProbe';
 import {
   WINDOWS_DIAG_SCRIPT,
   evaluatePcScan,
+  getChecklistIdsFromWindowsReport,
   parseWindowsDiagReport,
   type HardwareScanInput,
   type RecommendationPriority,
@@ -28,6 +29,7 @@ import {
 
 interface ScannerSectionProps {
   onApplyRecommendedModules: (moduleIds: string[]) => void;
+  onSyncChecklistItems?: (itemIds: string[]) => void;
 }
 
 type RecFilter = 'all' | 'high' | 'medium' | 'ok';
@@ -124,7 +126,10 @@ function FrameCadenceSparkline({ deltas }: { deltas: number[] }) {
   );
 }
 
-export function ScannerSection({ onApplyRecommendedModules }: ScannerSectionProps) {
+export function ScannerSection({
+  onApplyRecommendedModules,
+  onSyncChecklistItems,
+}: ScannerSectionProps) {
   const [scanning, setScanning] = useState(false);
   const [progress, setProgress] = useState(0);
   const [statusText, setStatusText] = useState('');
@@ -136,6 +141,7 @@ export function ScannerSection({ onApplyRecommendedModules }: ScannerSectionProp
   const [rawReport, setRawReport] = useState('');
   const [reportError, setReportError] = useState<string | null>(null);
   const [windowsReport, setWindowsReport] = useState<WindowsDiagReport | null>(null);
+  const [syncedCount, setSyncedCount] = useState<number | null>(null);
   const [appliedNotice, setAppliedNotice] = useState(false);
 
   const evaluation = scanData ? evaluatePcScan({ ...scanData, windowsReport }) : null;
@@ -189,6 +195,12 @@ export function ScannerSection({ onApplyRecommendedModules }: ScannerSectionProp
     setReportError(null);
     setWindowsReport(parsed.report);
 
+    const verifiedIds = getChecklistIdsFromWindowsReport(parsed.report);
+    setSyncedCount(verifiedIds.length);
+    if (verifiedIds.length > 0 && onSyncChecklistItems) {
+      onSyncChecklistItems(verifiedIds);
+    }
+
     if (!scanData) {
       await handleStartScan();
     }
@@ -196,6 +208,7 @@ export function ScannerSection({ onApplyRecommendedModules }: ScannerSectionProp
 
   const handleClearReport = () => {
     setWindowsReport(null);
+    setSyncedCount(null);
     setRawReport('');
     setReportError(null);
   };
@@ -211,15 +224,21 @@ export function ScannerSection({ onApplyRecommendedModules }: ScannerSectionProp
     if (!scanData) return '';
     if (windowsReport?.ramTotalGb) {
       const speedPart = windowsReport.ramSpeedMhz ? ` · ${windowsReport.ramSpeedMhz} МГц` : '';
-      return `${windowsReport.ramTotalGb} ГБ ОЗУ${speedPart} · ${scanData.cpuCores} потоков`;
+      const channelPart =
+        windowsReport.ramStickCount === 1
+          ? ' · 1 планка (одноканал!)'
+          : windowsReport.ramStickCount && windowsReport.ramStickCount >= 2
+            ? ` · ${windowsReport.ramStickCount} планки`
+            : '';
+      return `${windowsReport.ramTotalGb} ГБ ОЗУ${speedPart}${channelPart} · ${scanData.cpuCores} потоков`;
     }
     if (scanData.deviceMemoryGb === 8) {
-      return '≥ 8 ГБ ОЗУ (лимит браузера)';
+      return `≥ 8 ГБ ОЗУ (лимит браузера) · ${scanData.cpuCores} потоков`;
     }
     if (scanData.deviceMemoryGb !== null) {
-      return `~${scanData.deviceMemoryGb} ГБ ОЗУ`;
+      return `~${scanData.deviceMemoryGb} ГБ ОЗУ · ${scanData.cpuCores} потоков`;
     }
-    return 'Объём ОЗУ скрыт браузером';
+    return `Объём ОЗУ скрыт браузером · ${scanData.cpuCores} потоков`;
   })();
 
   const scoreAccent = evaluation ? getScoreAccent(evaluation.score) : null;
@@ -376,6 +395,12 @@ export function ScannerSection({ onApplyRecommendedModules }: ScannerSectionProp
                       <span className="text-violet-300">
                         Потенциал: {evaluation.estimatedFpsGain}
                       </span>
+                      <span className="text-slate-600" aria-hidden="true">
+                        ·
+                      </span>
+                      <span data-testid="scanner-checks-count" className="text-slate-300 tabular-nums">
+                        Проверено: {evaluation.checksCount} параметров
+                      </span>
                       {windowsReport && (
                         <>
                           <span className="text-slate-600" aria-hidden="true">
@@ -420,7 +445,7 @@ export function ScannerSection({ onApplyRecommendedModules }: ScannerSectionProp
 
             {/* Detected Telemetry Grid */}
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="p-4 rounded-xl bg-[#0C1220] border border-slate-800/90">
+              <div className="min-w-0 p-4 rounded-xl bg-[#0C1220] border border-slate-800/90">
                 <div className="flex items-center gap-2 text-xs font-mono text-slate-400 mb-1.5">
                   <Monitor className="w-4 h-4 text-cyan-400" />
                   <span>Видеокарта (GPU)</span>
@@ -432,9 +457,14 @@ export function ScannerSection({ onApplyRecommendedModules }: ScannerSectionProp
                   {windowsReport?.gpuName || scanData.gpuRenderer}
                 </div>
                 <div className="text-xs text-slate-400 mt-1">{evaluation.gpuInfo.label}</div>
+                {scanData.maxTextureSize && (
+                  <div className="text-[11px] font-mono text-slate-500 mt-1 tabular-nums">
+                    {scanData.webgl2Supported ? 'WebGL2' : 'WebGL1'} · текстура {scanData.maxTextureSize}px
+                  </div>
+                )}
               </div>
 
-              <div className="p-4 rounded-xl bg-[#0C1220] border border-slate-800/90">
+              <div className="min-w-0 p-4 rounded-xl bg-[#0C1220] border border-slate-800/90">
                 <div className="flex items-center gap-2 text-xs font-mono text-slate-400 mb-1.5">
                   <Cpu className="w-4 h-4 text-violet-400" />
                   <span>Процессор и ОЗУ</span>
@@ -448,7 +478,7 @@ export function ScannerSection({ onApplyRecommendedModules }: ScannerSectionProp
                 <div className="text-xs text-slate-400 mt-1">{ramSummary}</div>
               </div>
 
-              <div className="p-4 rounded-xl bg-[#0C1220] border border-slate-800/90">
+              <div className="min-w-0 p-4 rounded-xl bg-[#0C1220] border border-slate-800/90">
                 <div className="flex items-center gap-2 text-xs font-mono text-slate-400 mb-1.5">
                   <Gauge className="w-4 h-4 text-emerald-400" />
                   <span>Экран и фреймтайм</span>
@@ -458,24 +488,29 @@ export function ScannerSection({ onApplyRecommendedModules }: ScannerSectionProp
                 </div>
                 <div className="text-xs text-slate-400 mt-1 font-mono tabular-nums">
                   Кадр {scanData.avgFrameMs} мс · джиттер {scanData.frameJitterMs} мс
+                  {scanData.eventLoopLagMs !== undefined && scanData.eventLoopLagMs !== null
+                    ? ` · поток ${scanData.eventLoopLagMs} мс`
+                    : ''}
                 </div>
                 {scanData.frameDeltas && scanData.frameDeltas.length > 2 && (
                   <FrameCadenceSparkline deltas={scanData.frameDeltas} />
                 )}
               </div>
 
-              <div className="p-4 rounded-xl bg-[#0C1220] border border-slate-800/90">
+              <div className="min-w-0 p-4 rounded-xl bg-[#0C1220] border border-slate-800/90">
                 <div className="flex items-center gap-2 text-xs font-mono text-slate-400 mb-1.5">
                   <Activity className="w-4 h-4 text-amber-400" />
                   <span>ОС и система</span>
                 </div>
                 <div className="text-sm font-semibold text-white truncate">{scanData.osName}</div>
-                <div className="text-xs text-slate-400 mt-1">
+                <div className="text-xs text-slate-400 mt-1 leading-relaxed">
                   {windowsReport
-                    ? `Питание: ${POWER_PLAN_LABELS[windowsReport.powerPlan || ''] || windowsReport.powerPlan || '—'} · C: ${windowsReport.ssdFreePercent ?? '?'}%`
-                    : scanData.connectionRttMs !== null
-                      ? `Задержка сети ~${scanData.connectionRttMs} мс`
-                      : 'Базовый режим браузера'}
+                    ? `Питание: ${POWER_PLAN_LABELS[windowsReport.powerPlan || ''] || windowsReport.powerPlan || '—'} · HAGS: ${windowsReport.hagsEnabled ? 'Вкл' : 'Выкл'} · C: ${windowsReport.ssdFreePercent ?? '?'}%${windowsReport.tempSizeMb !== undefined ? ` · Temp: ${windowsReport.tempSizeMb} МБ` : ''}`
+                    : scanData.onBattery
+                      ? `От батареи (${scanData.batteryLevelPercent ?? '?'}%) — лимит мощности`
+                      : scanData.connectionRttMs !== null
+                        ? `Задержка сети ~${scanData.connectionRttMs} мс · От сети`
+                        : 'Базовый режим браузера'}
                 </div>
               </div>
             </div>
@@ -577,12 +612,12 @@ export function ScannerSection({ onApplyRecommendedModules }: ScannerSectionProp
                 <div className="text-sm font-bold text-white flex flex-wrap items-center gap-2">
                   <span>Глубокая диагностика Windows (PowerShell)</span>
                   <span className="text-xs font-mono font-normal text-slate-400">
-                    XMP · Питание · GameDVR · SSD
+                    XMP · Каналы ОЗУ · HAGS · Мышь · VBS · Temp · SSD
                   </span>
                 </div>
                 <div className="text-xs text-slate-400 mt-0.5">
-                  Браузер не видит частоту ОЗУ, схему питания и место на диске — проверь их за 5
-                  секунд read-only скриптом.
+                  Браузер не видит частоту/каналы ОЗУ, HAGS, изоляцию ядра (VBS) и кэш Temp —
+                  проверь все 17 системных параметров read-only скриптом за 5 секунд.
                 </div>
               </div>
             </div>
@@ -623,7 +658,7 @@ export function ScannerSection({ onApplyRecommendedModules }: ScannerSectionProp
                   </pre>
                 </div>
 
-                <div className="space-y-3">
+                <div className="min-w-0 space-y-3">
                   <label
                     htmlFor="windows-diag-input"
                     className="block text-xs font-mono text-slate-300"
@@ -639,7 +674,7 @@ export function ScannerSection({ onApplyRecommendedModules }: ScannerSectionProp
                       if (reportError) setReportError(null);
                     }}
                     rows={5}
-                    placeholder='OPTICORE:{"cpuName":"AMD Ryzen 5 5600X","gpuName":"NVIDIA GeForce RTX 3060","ramTotalGb":16,"ramSpeedMhz":3200,"powerPlan":"balanced","gameDvrEnabled":true,"ssdFreePercent":24,"startupCount":8}'
+                    placeholder='OPTICORE:{"cpuName":"AMD Ryzen 5 5600X","gpuName":"NVIDIA GeForce RTX 3060","ramTotalGb":16,"ramSpeedMhz":3200,"ramStickCount":2,"powerPlan":"balanced","gameDvrEnabled":true,"hagsEnabled":false,"mouseAccelEnabled":true,"vbsEnabled":false,"ssdFreePercent":24,"tempSizeMb":640,"startupCount":8}'
                     className="w-full p-3 rounded-xl bg-[#060911] border border-slate-700 focus:border-cyan-400 focus:outline-none text-xs font-mono text-slate-100 placeholder:text-slate-600"
                   />
 
@@ -669,6 +704,14 @@ export function ScannerSection({ onApplyRecommendedModules }: ScannerSectionProp
                         <X className="w-3.5 h-3.5" />
                         Сбросить отчёт
                       </button>
+                    )}
+                    {syncedCount !== null && syncedCount > 0 && (
+                      <span
+                        data-testid="checklist-sync-notice"
+                        className="text-xs font-mono text-emerald-300"
+                      >
+                        Синхронизировано с чек-листом: {syncedCount} пунктов
+                      </span>
                     )}
                   </div>
                 </div>
