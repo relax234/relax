@@ -4,6 +4,9 @@ const { autoUpdater } = require('electron-updater');
 
 let mainWindow = null;
 
+// Live cloud URL so code updates here reflect instantly in the .exe without new releases!
+const LIVE_CLOUD_URL = 'https://ais-pre-ycozi4jcbblbjgudogp3hh-567239189723.europe-west1.run.app';
+
 function sendUpdateStatus(payload) {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('opticore:update-status', payload);
@@ -83,7 +86,10 @@ function createWindow() {
   if (devUrl) {
     void mainWindow.loadURL(devUrl);
   } else {
-    void mainWindow.loadFile(path.join(__dirname, 'web-dist', 'index.html'));
+    // Try loading live cloud app first so updates appear instantly without rebuilding .exe
+    mainWindow.loadURL(LIVE_CLOUD_URL).catch(() => {
+      void mainWindow.loadFile(path.join(__dirname, 'web-dist', 'index.html'));
+    });
   }
 }
 
