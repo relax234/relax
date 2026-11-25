@@ -2,7 +2,7 @@ name: Build Windows EXE & Auto-Updater
 
 on:
   push:
-    branches: [main]
+    branches: [main, master]
     tags: ['v*']
   workflow_dispatch:
 
@@ -24,11 +24,12 @@ jobs:
 
       - name: Install web dependencies & build bundle
         run: |
-          npm ci
+          npm install
           npm run build
 
       - name: Install Electron dependencies
-        run: npm --prefix electron install
+        working-directory: electron
+        run: npm install
 
       - name: Configure GitHub auto-updater repository metadata
         shell: pwsh
@@ -43,14 +44,16 @@ jobs:
           $cfg | ConvertTo-Json -Depth 6 | Set-Content "electron/electron-builder.json" -Encoding UTF8
 
       - name: Build Windows Installer (.exe) & Portable (.exe)
+        working-directory: electron
+        shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          node electron/prepare-dist.mjs
+          node prepare-dist.mjs
           if ("${{ github.ref }}".StartsWith("refs/tags/v")) {
-            npx --prefix electron electron-builder --win --x64 --publish always --config electron/electron-builder.json
+            npx electron-builder --win --x64 --config electron-builder.json --publish always
           } else {
-            npx --prefix electron electron-builder --win --x64 --publish never --config electron/electron-builder.json
+            npx electron-builder --win --x64 --config electron-builder.json --publish never
           }
 
       - name: Upload built EXE artifacts
