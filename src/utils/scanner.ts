@@ -24,6 +24,7 @@ export interface HardwareScanInput {
   osName: string;
   isWindows: boolean;
   connectionRttMs: number | null;
+  frameDeltas?: number[];
   windowsReport?: WindowsDiagReport | null;
 }
 

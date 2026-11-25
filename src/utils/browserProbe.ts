@@ -72,6 +72,7 @@ function measureDisplayCadence(): Promise<{
   measuredHz: number;
   avgFrameMs: number;
   frameJitterMs: number;
+  deltas: number[];
 }> {
   return new Promise((resolve) => {
     const deltas: number[] = [];
@@ -93,7 +94,7 @@ function measureDisplayCadence(): Promise<{
         window.requestAnimationFrame(tick);
       } else {
         if (deltas.length < 4) {
-          resolve({ measuredHz: 60, avgFrameMs: 16.7, frameJitterMs: 0.8 });
+          resolve({ measuredHz: 60, avgFrameMs: 16.7, frameJitterMs: 0.8, deltas: [] });
           return;
         }
         const sorted = [...deltas].sort((a, b) => a - b);
@@ -106,6 +107,7 @@ function measureDisplayCadence(): Promise<{
           measuredHz: snapRefreshRate(1000 / median),
           avgFrameMs: Number(avg.toFixed(1)),
           frameJitterMs: Number(variance.toFixed(1)),
+          deltas: deltas.map((d) => Number(d.toFixed(1))),
         });
       }
     };
@@ -152,6 +154,7 @@ export async function runBrowserHardwareProbe(
     measuredHz: cadence.measuredHz,
     avgFrameMs: cadence.avgFrameMs,
     frameJitterMs: cadence.frameJitterMs,
+    frameDeltas: cadence.deltas,
     osName,
     isWindows,
     connectionRttMs,

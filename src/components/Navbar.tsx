@@ -1,12 +1,12 @@
 export function Navbar() {
   return (
-    <header className="sticky top-0 z-50 backdrop-blur-md bg-[#070B14]/80 border-b border-slate-800/80">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+    <header className="sticky top-0 z-50 backdrop-blur-md bg-[#060911]/85 border-b border-slate-800/80">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-8">
         <a
           href="#top"
-          className="flex items-center gap-2.5 font-extrabold text-xl tracking-tight whitespace-nowrap shrink-0"
+          className="flex items-center gap-2.5 font-bold text-lg tracking-tight text-white whitespace-nowrap shrink-0"
         >
-          <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-400 to-violet-600 flex items-center justify-center text-slate-950 font-mono text-sm">
+          <span className="w-7 h-7 rounded-lg bg-gradient-to-br from-cyan-400 to-violet-500 flex items-center justify-center text-slate-950 font-mono text-xs font-bold">
             OC
           </span>
           <span>
@@ -18,26 +18,41 @@ export function Navbar() {
           aria-label="Основная навигация"
           className="hidden md:flex items-center gap-7 text-sm font-medium text-slate-300"
         >
-          <a href="#scanner" className="hover:text-cyan-400 transition whitespace-nowrap shrink-0">
+          <a
+            href="#scanner"
+            className="py-1 border-b border-transparent hover:border-cyan-400 hover:text-white transition-colors whitespace-nowrap shrink-0"
+          >
             Сканер ПК
           </a>
-          <a href="#checklist" className="hover:text-cyan-400 transition whitespace-nowrap shrink-0">
+          <a
+            href="#checklist"
+            className="py-1 border-b border-transparent hover:border-cyan-400 hover:text-white transition-colors whitespace-nowrap shrink-0"
+          >
             Чек-лист
           </a>
-          <a href="#generator" className="hover:text-cyan-400 transition whitespace-nowrap shrink-0">
-            Генератор скриптов
+          <a
+            href="#generator"
+            className="py-1 border-b border-transparent hover:border-cyan-400 hover:text-white transition-colors whitespace-nowrap shrink-0"
+          >
+            Генератор
           </a>
-          <a href="#gpu-tips" className="hover:text-cyan-400 transition whitespace-nowrap shrink-0">
-            Видеокарты и OS
+          <a
+            href="#gpu-tips"
+            className="py-1 border-b border-transparent hover:border-cyan-400 hover:text-white transition-colors whitespace-nowrap shrink-0"
+          >
+            Драйверы и BIOS
           </a>
-          <a href="#faq" className="hover:text-cyan-400 transition whitespace-nowrap shrink-0">
+          <a
+            href="#faq"
+            className="py-1 border-b border-transparent hover:border-cyan-400 hover:text-white transition-colors whitespace-nowrap shrink-0"
+          >
             FAQ
           </a>
         </nav>
 
         <a
           href="#generator"
-          className="px-4 py-2 rounded-lg bg-cyan-400 text-slate-950 font-semibold text-sm hover:bg-cyan-300 transition glow-btn whitespace-nowrap shrink-0"
+          className="px-4 py-2 rounded-lg bg-cyan-400 text-slate-950 font-bold text-xs sm:text-sm hover:bg-cyan-300 glow-btn whitespace-nowrap shrink-0"
         >
           Создать скрипт
         </a>

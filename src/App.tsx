@@ -64,6 +64,16 @@ export default function App() {
     }));
   };
 
+  const handleSelectPresetModules = (moduleIds: string[]) => {
+    setSelectedModules(() => {
+      const next: Record<string, boolean> = {};
+      for (const mod of SCRIPT_MODULES) {
+        next[mod.id] = moduleIds.includes(mod.id);
+      }
+      return next;
+    });
+  };
+
   const handleApplyRecommendedModules = (moduleIds: string[]) => {
     setSelectedModules(() => {
       const next: Record<string, boolean> = {};
@@ -93,6 +103,7 @@ export default function App() {
           selectedModules={selectedModules}
           format={format}
           onToggleModule={handleToggleModule}
+          onSelectPreset={handleSelectPresetModules}
           onFormatChange={setFormat}
         />
         <GpuTipsSection />
