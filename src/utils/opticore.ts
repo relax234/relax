@@ -147,7 +147,7 @@ export const SCRIPT_MODULES: ScriptModule[] = [
     desc: 'Автоматический бэкап реестра перед применением твиков',
     defaultEnabled: true,
     bat: String.raw`echo Создание точки восстановления...
-powershell -Command "Checkpoint-Computer -Description 'OptiCore_Backup' -RestorePointType 'MODIFY_SETTINGS'" 2>nul`,
+powershell -NoProfile -ExecutionPolicy Bypass -Command "Checkpoint-Computer -Description 'OptiCore_Backup' -RestorePointType 'MODIFY_SETTINGS'" >nul 2>&1`,
     ps1: String.raw`Write-Host "Создание точки восстановления..." -ForegroundColor Cyan
 Checkpoint-Computer -Description "OptiCore_Backup" -RestorePointType "MODIFY_SETTINGS" -ErrorAction SilentlyContinue`,
   },
@@ -159,11 +159,10 @@ Checkpoint-Computer -Description "OptiCore_Backup" -RestorePointType "MODIFY_SET
     desc: 'Активирует скрытый профиль Ultimate Performance без сброса частот',
     defaultEnabled: true,
     bat: String.raw`echo Активация схемы Максимальной производительности...
-powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 >nul
-powercfg /setactive SCHEME_MIN`,
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$d = powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 2>$null; if ($d -match '([0-9a-fA-F-]{36})') { powercfg /setactive $matches[1] } else { powercfg /setactive SCHEME_MIN }" >nul 2>&1`,
     ps1: String.raw`Write-Host "Активация схемы Максимальной производительности..." -ForegroundColor Cyan
-powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 | Out-Null
-powercfg /setactive SCHEME_MIN`,
+$dup = powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 2>$null
+if ($dup -match '([0-9a-fA-F-]{36})') { powercfg /setactive $matches[1] | Out-Null } else { powercfg /setactive SCHEME_MIN | Out-Null }`,
   },
   {
     id: 'timerResolutionBcd',
@@ -208,6 +207,37 @@ Stop-Service "DiagTrack" -Force -ErrorAction SilentlyContinue
 Set-Service "DiagTrack" -StartupType Disabled -ErrorAction SilentlyContinue
 Stop-Service "dmwappushservice" -Force -ErrorAction SilentlyContinue
 Set-Service "dmwappushservice" -StartupType Disabled -ErrorAction SilentlyContinue`,
+  },
+  {
+    id: 'cpuCoreParkingOff',
+    category: 'system',
+    impactTag: '-Статтеры CPU',
+    title: 'Отключить парковку ядер процессора (100% активных ядер)',
+    desc: 'Запрещает Windows усыплять ядра CPU в простое — убирает резкие просадки FPS',
+    defaultEnabled: false,
+    bat: String.raw`echo Отключение парковки ядер CPU (CPMINCORES = 100)...
+powercfg -setacvalueindex SCHEME_CURRENT SUB_PROCESSOR CPMINCORES 100 >nul 2>&1
+powercfg /setactive SCHEME_CURRENT >nul 2>&1`,
+    ps1: String.raw`Write-Host "Отключение парковки ядер CPU..." -ForegroundColor Cyan
+powercfg -setacvalueindex SCHEME_CURRENT SUB_PROCESSOR CPMINCORES 100 | Out-Null
+powercfg /setactive SCHEME_CURRENT | Out-Null`,
+  },
+  {
+    id: 'disableErrorReporting',
+    category: 'system',
+    impactTag: '-Фоновый диск',
+    title: 'Отключить отчёты об ошибках (WerSvc) и веб-поиск Bing',
+    desc: 'Убирает фоновый сбор дампов WerSvc и тормоза поиска в меню Пуск',
+    defaultEnabled: false,
+    bat: String.raw`echo Отключение службы отчётов WerSvc и веб-поиска в Пуске...
+sc stop WerSvc >nul 2>&1
+sc config WerSvc start= disabled >nul 2>&1
+reg add "HKCU\Software\Policies\Microsoft\Windows\Explorer" /v "DisableSearchBoxSuggestions" /t REG_DWORD /d 1 /f >nul 2>&1`,
+    ps1: String.raw`Write-Host "Отключение WerSvc и веб-поиска в Пуске..." -ForegroundColor Cyan
+Stop-Service "WerSvc" -Force -ErrorAction SilentlyContinue
+Set-Service "WerSvc" -StartupType Disabled -ErrorAction SilentlyContinue
+New-Item -Path "HKCU:\Software\Policies\Microsoft\Windows\Explorer" -Force | Out-Null
+Set-ItemProperty -Path "HKCU:\Software\Policies\Microsoft\Windows\Explorer" -Name "DisableSearchBoxSuggestions" -Value 1 -ErrorAction SilentlyContinue`,
   },
 
   // === GAMING & GPU (5) ===
@@ -285,6 +315,35 @@ Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\PriorityControl" 
 reg add "HKLM\SOFTWARE\Microsoft\Windows\Dwm" /v "OverlayTestMode" /t REG_DWORD /d 5 /f >nul`,
     ps1: String.raw`Write-Host "Отключение Multi-Plane Overlay (MPO)..." -ForegroundColor Cyan
 Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\Dwm" -Name "OverlayTestMode" -Value 5 -ErrorAction SilentlyContinue`,
+  },
+  {
+    id: 'disablePowerThrottling',
+    category: 'gaming',
+    impactTag: 'Макс. частота CPU',
+    title: 'Отключить системный Power Throttling (Windows 10/11)',
+    desc: 'Запрещает планировщику Windows искусственно занижать частоты потоков игр',
+    defaultEnabled: false,
+    bat: String.raw`echo Отключение Power Throttling...
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling" /v "PowerThrottlingOff" /t REG_DWORD /d 1 /f >nul`,
+    ps1: String.raw`Write-Host "Отключение Power Throttling..." -ForegroundColor Cyan
+New-Item -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling" -Force | Out-Null
+Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling" -Name "PowerThrottlingOff" -Value 1 -ErrorAction SilentlyContinue`,
+  },
+  {
+    id: 'highProcessPriorityFse',
+    category: 'gaming',
+    impactTag: 'Плавный Alt-Tab',
+    title: 'Оптимизировать полноэкранный режим DX11/DX12 (FSE)',
+    desc: 'Уменьшает задержку вывода кадра в играх через DXGI Honor FSE',
+    defaultEnabled: false,
+    bat: String.raw`echo Настройка FSEBehaviorMode для полноэкранных игр...
+reg add "HKCU\System\GameConfigStore" /v "GameDVR_FSEBehaviorMode" /t REG_DWORD /d 2 /f >nul
+reg add "HKCU\System\GameConfigStore" /v "GameDVR_HonorUserFSEBehaviorMode" /t REG_DWORD /d 1 /f >nul
+reg add "HKCU\System\GameConfigStore" /v "GameDVR_DXGIHonorFSEWindowsCompatible" /t REG_DWORD /d 1 /f >nul`,
+    ps1: String.raw`Write-Host "Настройка FSEBehaviorMode для полноэкранных игр..." -ForegroundColor Cyan
+Set-ItemProperty -Path "HKCU:\System\GameConfigStore" -Name "GameDVR_FSEBehaviorMode" -Value 2 -ErrorAction SilentlyContinue
+Set-ItemProperty -Path "HKCU:\System\GameConfigStore" -Name "GameDVR_HonorUserFSEBehaviorMode" -Value 1 -ErrorAction SilentlyContinue
+Set-ItemProperty -Path "HKCU:\System\GameConfigStore" -Name "GameDVR_DXGIHonorFSEWindowsCompatible" -Value 1 -ErrorAction SilentlyContinue`,
   },
 
   // === INPUT & OVERLAYS (5) ===
@@ -366,6 +425,39 @@ New-Item -Path "HKLM:\SYSTEM\CurrentControlSet\Services\USB" -Force | Out-Null
 Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\USB" -Name "DisableSelectiveSuspend" -Value 1 -ErrorAction SilentlyContinue
 powercfg /setacvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 0 | Out-Null`,
   },
+  {
+    id: 'audioLatencyBoost',
+    category: 'input',
+    impactTag: '-DPC Звука',
+    title: 'Приоритет аудиопотока Windows (Tasks\\Audio)',
+    desc: 'Снижает микрозадержки и треск звука в шутерах при высокой нагрузке CPU',
+    defaultEnabled: false,
+    bat: String.raw`echo Оптимизация приоритета Tasks\Audio...
+reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Audio" /v "Priority" /t REG_DWORD /d 6 /f >nul
+reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Audio" /v "Scheduling Category" /t REG_SZ /d "High" /f >nul
+reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Audio" /v "SFIO Priority" /t REG_SZ /d "High" /f >nul`,
+    ps1: String.raw`Write-Host "Оптимизация приоритета Tasks\Audio..." -ForegroundColor Cyan
+$audioPath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Audio"
+Set-ItemProperty -Path $audioPath -Name "Priority" -Value 6 -ErrorAction SilentlyContinue
+Set-ItemProperty -Path $audioPath -Name "Scheduling Category" -Value "High" -ErrorAction SilentlyContinue
+Set-ItemProperty -Path $audioPath -Name "SFIO Priority" -Value "High" -ErrorAction SilentlyContinue`,
+  },
+  {
+    id: 'csrWaitAndMenuDelay',
+    category: 'input',
+    impactTag: 'Быстрый UI',
+    title: 'Мгновенный отклик интерфейса (MenuShowDelay = 0)',
+    desc: 'Убирает задержки открытия меню и ускоряет реакцию рабочего стола',
+    defaultEnabled: false,
+    bat: String.raw`echo Ускорение отклика интерфейса Desktop...
+reg add "HKCU\Control Panel\Desktop" /v "MenuShowDelay" /t REG_SZ /d "0" /f >nul
+reg add "HKCU\Control Panel\Desktop" /v "HungAppTimeout" /t REG_SZ /d "1000" /f >nul
+reg add "HKCU\Control Panel\Desktop" /v "AutoEndTasks" /t REG_SZ /d "1" /f >nul`,
+    ps1: String.raw`Write-Host "Ускорение отклика интерфейса Desktop..." -ForegroundColor Cyan
+Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name "MenuShowDelay" -Value "0" -ErrorAction SilentlyContinue
+Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name "HungAppTimeout" -Value "1000" -ErrorAction SilentlyContinue
+Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name "AutoEndTasks" -Value "1" -ErrorAction SilentlyContinue`,
+  },
 
   // === NETWORK & STORAGE (5) ===
   {
@@ -421,7 +513,7 @@ Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Delivery
     desc: 'Сетевые пакеты отправляются мгновенно без буферизации — снижает джиттер пинга',
     defaultEnabled: false,
     bat: String.raw`echo Отключение алгоритма Нагла для сетевых адаптеров...
-powershell -Command "Get-ChildItem 'HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces' | ForEach-Object { Set-ItemProperty -Path $_.PSPath -Name 'TcpAckFrequency' -Value 1 -ErrorAction SilentlyContinue; Set-ItemProperty -Path $_.PSPath -Name 'TCPNoDelay' -Value 1 -ErrorAction SilentlyContinue }" >nul 2>&1`,
+powershell -NoProfile -ExecutionPolicy Bypass -Command "Get-ChildItem 'HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces' | ForEach-Object { Set-ItemProperty -Path $_.PSPath -Name 'TcpAckFrequency' -Value 1 -ErrorAction SilentlyContinue; Set-ItemProperty -Path $_.PSPath -Name 'TCPNoDelay' -Value 1 -ErrorAction SilentlyContinue }" >nul 2>&1`,
     ps1: String.raw`Write-Host "Отключение алгоритма Нагла для сетевых адаптеров..." -ForegroundColor Cyan
 Get-ChildItem "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces" | ForEach-Object {
   Set-ItemProperty -Path $_.PSPath -Name "TcpAckFrequency" -Value 1 -ErrorAction SilentlyContinue
@@ -437,10 +529,42 @@ Get-ChildItem "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfac
     defaultEnabled: false,
     bat: String.raw`echo Оптимизация NTFS и отключение лишних дампов...
 fsutil behavior set disablelastaccess 1 >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\CrashControl" /v "CrashDumpEnabled" /t REG_DWORD /d 0 /f >nul`,
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\CrashControl" /v "CrashDumpEnabled" /t REG_DWORD /d 0 /f >nul 2>&1`,
     ps1: String.raw`Write-Host "Оптимизация NTFS и отключение лишних дампов..." -ForegroundColor Cyan
 fsutil behavior set disablelastaccess 1 | Out-Null
 Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\CrashControl" -Name "CrashDumpEnabled" -Value 0 -ErrorAction SilentlyContinue`,
+  },
+  {
+    id: 'dnsCloudflareQuad',
+    category: 'network',
+    impactTag: 'Быстрый DNS',
+    title: 'Установить быстрый DNS Cloudflare (1.1.1.1 / 1.0.0.1)',
+    desc: 'Ускоряет поиск игровых серверов и снижает задержку резолвинга IPv4',
+    defaultEnabled: false,
+    bat: String.raw`echo Настройка быстрого DNS Cloudflare (1.1.1.1)...
+powershell -NoProfile -ExecutionPolicy Bypass -Command "Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | ForEach-Object { Set-DnsClientServerAddress -InterfaceIndex $_.ifIndex -ServerAddresses ('1.1.1.1','1.0.0.1') }" >nul 2>&1`,
+    ps1: String.raw`Write-Host "Настройка быстрого DNS Cloudflare (1.1.1.1)..." -ForegroundColor Cyan
+Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | ForEach-Object {
+  Set-DnsClientServerAddress -InterfaceIndex $_.ifIndex -ServerAddresses ("1.1.1.1","1.0.0.1") -ErrorAction SilentlyContinue
+}`,
+  },
+  {
+    id: 'disableRemoteAndMaps',
+    category: 'network',
+    impactTag: '-Фон службы',
+    title: 'Отключить фоновые карты и факс (MapsBroker / Fax / RemoteReg)',
+    desc: 'Освобождает оперативную память от неиспользуемых сетевых служб Windows',
+    defaultEnabled: false,
+    bat: String.raw`echo Отключение служб MapsBroker, Fax и RemoteRegistry...
+sc stop MapsBroker >nul 2>&1
+sc config MapsBroker start= disabled >nul 2>&1
+sc config Fax start= disabled >nul 2>&1
+sc config RemoteRegistry start= disabled >nul 2>&1`,
+    ps1: String.raw`Write-Host "Отключение служб MapsBroker, Fax и RemoteRegistry..." -ForegroundColor Cyan
+foreach ($svc in @("MapsBroker","Fax","RemoteRegistry")) {
+  Stop-Service $svc -Force -ErrorAction SilentlyContinue
+  Set-Service $svc -StartupType Disabled -ErrorAction SilentlyContinue
+}`,
   },
 ];
 
@@ -509,6 +633,44 @@ export function calculateOptimizationScore(
   };
 }
 
+function toBatchSafeEcho(text: string): string {
+  return text
+    .replace(/%/g, '')
+    .replace(/[&|<>^]/g, ' ');
+}
+
+function toCrlf(text: string): string {
+  return text.replace(/\r?\n/g, '\r\n');
+}
+
+const BAT_ADMIN_HEADER = `@echo off
+chcp 65001 >nul 2>&1
+title OptiCore PC Optimizer
+
+net session >nul 2>&1
+if not errorlevel 1 goto :ADMIN_OK
+
+echo Запрос прав администратора для применения настроек Windows...
+set "OPTICORE_SELF=%~f0"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Process -FilePath $env:OPTICORE_SELF -Verb RunAs" >nul 2>&1
+if not errorlevel 1 exit /b
+
+echo.
+echo [ВНИМАНИЕ] Скрипт запущен без прав администратора.
+echo Нажмите правой кнопкой мыши по файлу и выберите Запуск от имени администратора.
+echo.
+pause
+exit /b
+
+:ADMIN_OK`;
+
+const PS1_ADMIN_HEADER = `$isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+if (-not $isAdmin) {
+  Write-Host "Запрос прав администратора..." -ForegroundColor Yellow
+  Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File \`"$PSCommandPath\`"" -Verb RunAs
+  exit
+}`;
+
 export function generateOptimizationScript(
   format: ScriptFormat,
   selectedModules: Record<string, boolean>,
@@ -516,9 +678,7 @@ export function generateOptimizationScript(
   const active = SCRIPT_MODULES.filter((m) => selectedModules[m.id]);
 
   if (format === 'bat') {
-    let code = `@echo off
-chcp 65001 >nul
-title OptiCore PC Optimizer
+    let code = `${BAT_ADMIN_HEADER}
 echo ==========================================
 echo   OptiCore — Безопасная оптимизация ПК
 echo ==========================================
@@ -530,15 +690,19 @@ echo.
     } else {
       code +=
         active
-          .map((m, i) => `echo [${i + 1}/${active.length}] ${m.title}\n${m.bat}`)
+          .map(
+            (m, i) =>
+              `echo [${i + 1}/${active.length}] ${toBatchSafeEcho(m.title)}\n${m.bat}`,
+          )
           .join('\n\n') +
-        `\n\necho.\necho Готово! Перезагрузи ПК для применения всех настроек.\n`;
+        `\n\necho.\necho ==========================================\necho   Готово! Перезагрузи ПК для применения.\necho ==========================================\n`;
     }
-    code += `pause`;
-    return code;
+    code += `pause\n`;
+    return toCrlf(code);
   }
 
   let code = `# OptiCore PC Optimizer (PowerShell)
+${PS1_ADMIN_HEADER}
 Write-Host "==========================================" -ForegroundColor Cyan
 Write-Host "  OptiCore — Безопасная оптимизация ПК" -ForegroundColor Cyan
 Write-Host "==========================================" -ForegroundColor Cyan
@@ -562,50 +726,65 @@ Write-Host "==========================================" -ForegroundColor Cyan
 
 export function generateRollbackScript(format: ScriptFormat): string {
   if (format === 'bat') {
-    return String.raw`@echo off
-chcp 65001 >nul
-title OptiCore Rollback — Сброс в сток
+    return toCrlf(String.raw`${BAT_ADMIN_HEADER}
 echo Возврат параметров Windows по умолчанию...
 powercfg /setactive 381b4222-f694-41f0-9685-ff5bb260df2e >nul 2>&1
+powercfg -setacvalueindex SCHEME_CURRENT SUB_PROCESSOR CPMINCORES 5 >nul 2>&1
+powercfg /setactive SCHEME_CURRENT >nul 2>&1
 powercfg /h on >nul 2>&1
 bcdedit /deletevalue disabledynamictick >nul 2>&1
 bcdedit /deletevalue useplatformtick >nul 2>&1
-reg add "HKCU\System\GameConfigStore" /v "GameDVR_Enabled" /t REG_DWORD /d 1 /f >nul
-reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v "NetworkThrottlingIndex" /t REG_DWORD /d 10 /f >nul
-reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v "SystemResponsiveness" /t REG_DWORD /d 20 /f >nul
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v "Win32PrioritySeparation" /t REG_DWORD /d 2 /f >nul
+reg add "HKCU\System\GameConfigStore" /v "GameDVR_Enabled" /t REG_DWORD /d 1 /f >nul 2>&1
+reg delete "HKCU\System\GameConfigStore" /v "GameDVR_FSEBehaviorMode" /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v "NetworkThrottlingIndex" /t REG_DWORD /d 10 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v "SystemResponsiveness" /t REG_DWORD /d 20 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v "Win32PrioritySeparation" /t REG_DWORD /d 2 /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling" /v "PowerThrottlingOff" /f >nul 2>&1
 reg delete "HKLM\SOFTWARE\Microsoft\Windows\Dwm" /v "OverlayTestMode" /f >nul 2>&1
-reg add "HKCU\Control Panel\Mouse" /v "MouseSpeed" /t REG_SZ /d "1" /f >nul
-reg add "HKCU\Control Panel\Mouse" /v "MouseThreshold1" /t REG_SZ /d "6" /f >nul
-reg add "HKCU\Control Panel\Mouse" /v "MouseThreshold2" /t REG_SZ /d "10" /f >nul
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize" /v "EnableTransparency" /t REG_DWORD /d 1 /f >nul
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications" /v "GlobalUserDisabled" /t REG_DWORD /d 0 /f >nul
+reg add "HKCU\Control Panel\Mouse" /v "MouseSpeed" /t REG_SZ /d "1" /f >nul 2>&1
+reg add "HKCU\Control Panel\Mouse" /v "MouseThreshold1" /t REG_SZ /d "6" /f >nul 2>&1
+reg add "HKCU\Control Panel\Mouse" /v "MouseThreshold2" /t REG_SZ /d "10" /f >nul 2>&1
+reg add "HKCU\Control Panel\Desktop" /v "MenuShowDelay" /t REG_SZ /d "400" /f >nul 2>&1
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize" /v "EnableTransparency" /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications" /v "GlobalUserDisabled" /t REG_DWORD /d 0 /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Services\USB" /v "DisableSelectiveSuspend" /f >nul 2>&1
 sc config DiagTrack start= auto >nul 2>&1
 sc start DiagTrack >nul 2>&1
+sc config WerSvc start= demand >nul 2>&1
+powershell -NoProfile -ExecutionPolicy Bypass -Command "Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | ForEach-Object { Set-DnsClientServerAddress -InterfaceIndex $_.ifIndex -ResetServerAddresses }" >nul 2>&1
+echo.
 echo Готово! Перезагрузи ПК для полного отката.
-pause`;
+pause
+`);
   }
 
   return String.raw`# OptiCore Rollback — Возврат параметров Windows в сток
+${PS1_ADMIN_HEADER}
 Write-Host "Возврат параметров Windows по умолчанию..." -ForegroundColor Yellow
 powercfg /setactive 381b4222-f694-41f0-9685-ff5bb260df2e | Out-Null
+powercfg -setacvalueindex SCHEME_CURRENT SUB_PROCESSOR CPMINCORES 5 | Out-Null
+powercfg /setactive SCHEME_CURRENT | Out-Null
 powercfg /h on
 bcdedit /deletevalue disabledynamictick | Out-Null
 bcdedit /deletevalue useplatformtick | Out-Null
 Set-ItemProperty -Path "HKCU:\System\GameConfigStore" -Name "GameDVR_Enabled" -Value 1 -ErrorAction SilentlyContinue
+Remove-ItemProperty -Path "HKCU:\System\GameConfigStore" -Name "GameDVR_FSEBehaviorMode" -ErrorAction SilentlyContinue
 Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" -Name "NetworkThrottlingIndex" -Value 10 -ErrorAction SilentlyContinue
 Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" -Name "SystemResponsiveness" -Value 20 -ErrorAction SilentlyContinue
 Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\PriorityControl" -Name "Win32PrioritySeparation" -Value 2 -ErrorAction SilentlyContinue
+Remove-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling" -Name "PowerThrottlingOff" -ErrorAction SilentlyContinue
 Remove-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\Dwm" -Name "OverlayTestMode" -ErrorAction SilentlyContinue
 Set-ItemProperty -Path "HKCU:\Control Panel\Mouse" -Name "MouseSpeed" -Value "1" -ErrorAction SilentlyContinue
 Set-ItemProperty -Path "HKCU:\Control Panel\Mouse" -Name "MouseThreshold1" -Value "6" -ErrorAction SilentlyContinue
 Set-ItemProperty -Path "HKCU:\Control Panel\Mouse" -Name "MouseThreshold2" -Value "10" -ErrorAction SilentlyContinue
+Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name "MenuShowDelay" -Value "400" -ErrorAction SilentlyContinue
 Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "EnableTransparency" -Value 1 -ErrorAction SilentlyContinue
 Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications" -Name "GlobalUserDisabled" -Value 0 -ErrorAction SilentlyContinue
 Remove-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\USB" -Name "DisableSelectiveSuspend" -ErrorAction SilentlyContinue
 Set-Service "DiagTrack" -StartupType Automatic -ErrorAction SilentlyContinue
 Start-Service "DiagTrack" -ErrorAction SilentlyContinue
+Set-Service "WerSvc" -StartupType Manual -ErrorAction SilentlyContinue
+Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | ForEach-Object { Set-DnsClientServerAddress -InterfaceIndex $_.ifIndex -ResetServerAddresses -ErrorAction SilentlyContinue }
 Write-Host "Готово! Перезагрузи ПК для полного отката." -ForegroundColor Green
 Read-Host "Нажми Enter для выхода"`;
 }

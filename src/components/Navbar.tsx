@@ -1,50 +1,48 @@
 export function Navbar() {
   return (
-    <header className="sticky top-0 z-50 backdrop-blur-md bg-[#060911]/85 border-b border-slate-800/80">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-8">
+    <header className="sticky top-0 z-50 backdrop-blur-md bg-[#09090B]/90 border-b border-zinc-800/80">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-8">
         <a
           href="#top"
-          className="flex items-center gap-2.5 font-bold text-lg tracking-tight text-white whitespace-nowrap shrink-0"
+          className="flex items-center gap-2.5 font-bold text-base tracking-tight text-white whitespace-nowrap shrink-0"
         >
-          <span className="w-7 h-7 rounded-lg bg-gradient-to-br from-cyan-400 to-violet-500 flex items-center justify-center text-slate-950 font-mono text-xs font-bold">
+          <span className="w-6 h-6 rounded-md bg-white flex items-center justify-center text-zinc-950 font-mono text-[11px] font-extrabold">
             OC
           </span>
-          <span>
-            Opti<span className="text-cyan-400">Core</span>
-          </span>
+          <span>OptiCore</span>
         </a>
 
         <nav
           aria-label="Основная навигация"
-          className="hidden md:flex items-center gap-7 text-sm font-medium text-slate-300"
+          className="hidden md:flex items-center gap-6 text-sm font-medium text-zinc-400"
         >
           <a
             href="#scanner"
-            className="py-1 border-b border-transparent hover:border-cyan-400 hover:text-white transition-colors whitespace-nowrap shrink-0"
+            className="py-1 border-b border-transparent hover:border-white hover:text-white transition-colors whitespace-nowrap shrink-0"
           >
             Сканер ПК
           </a>
           <a
             href="#compare"
-            className="py-1 border-b border-transparent hover:border-cyan-400 hover:text-white transition-colors whitespace-nowrap shrink-0"
+            className="py-1 border-b border-transparent hover:border-white hover:text-white transition-colors whitespace-nowrap shrink-0"
           >
             Сравнение
           </a>
           <a
             href="#checklist"
-            className="py-1 border-b border-transparent hover:border-cyan-400 hover:text-white transition-colors whitespace-nowrap shrink-0"
+            className="py-1 border-b border-transparent hover:border-white hover:text-white transition-colors whitespace-nowrap shrink-0"
           >
             Чек-лист
           </a>
           <a
             href="#generator"
-            className="py-1 border-b border-transparent hover:border-cyan-400 hover:text-white transition-colors whitespace-nowrap shrink-0"
+            className="py-1 border-b border-transparent hover:border-white hover:text-white transition-colors whitespace-nowrap shrink-0"
           >
             Генератор
           </a>
           <a
             href="#faq"
-            className="py-1 border-b border-transparent hover:border-cyan-400 hover:text-white transition-colors whitespace-nowrap shrink-0"
+            className="py-1 border-b border-transparent hover:border-white hover:text-white transition-colors whitespace-nowrap shrink-0"
           >
             FAQ
           </a>
@@ -52,7 +50,7 @@ export function Navbar() {
 
         <a
           href="#generator"
-          className="px-4 py-2 rounded-lg bg-cyan-400 text-slate-950 font-bold text-xs sm:text-sm hover:bg-cyan-300 glow-btn whitespace-nowrap shrink-0"
+          className="px-3.5 py-1.5 rounded-lg bg-white text-zinc-950 font-bold text-xs sm:text-sm hover:bg-zinc-200 glow-btn whitespace-nowrap shrink-0"
         >
           Создать скрипт
         </a>

@@ -100,10 +100,11 @@ function measureDisplayCadence(): Promise<{
     const deltas: number[] = [];
     let lastTime = 0;
     let frameCount = 0;
-    const maxFrames = 36;
+    const warmupFrames = 2;
+    const maxFrames = 44;
 
     const tick = (now: number) => {
-      if (lastTime > 0) {
+      if (lastTime > 0 && frameCount >= warmupFrames) {
         const dt = now - lastTime;
         if (dt > 1 && dt < 120) {
           deltas.push(dt);

@@ -23,6 +23,11 @@ export interface WindowsDiagReport {
   usbPowerSavingOff?: boolean;
   nagleDisabled?: boolean;
   hibernationDisabled?: boolean;
+  powerThrottlingOff?: boolean;
+  transparencyDisabled?: boolean;
+  uwpBackgroundDisabled?: boolean;
+  gpuPriorityHigh?: boolean;
+  fastDnsConfigured?: boolean;
 }
 
 export interface HardwareScanInput {
@@ -59,8 +64,18 @@ export interface ScanRecommendation {
   moduleIds: string[];
 }
 
+export interface VerifiedWindowsCheck {
+  id: string;
+  label: string;
+  valueText: string;
+  passed: boolean;
+}
+
 export interface ScanEvaluation {
   score: number;
+  hardwareScore: number;
+  optimizationScore: number | null;
+  windowsVerified: boolean;
   checksCount: number;
   verdictBadge: string;
   verdictTitle: string;
@@ -71,6 +86,7 @@ export interface ScanEvaluation {
     isIntegratedOrWeak: boolean;
     label: string;
   };
+  verifiedChecks: VerifiedWindowsCheck[];
   recommendations: ScanRecommendation[];
   recommendedModuleIds: string[];
 }
@@ -84,7 +100,7 @@ $ramSticks = @(Get-CimInstance Win32_PhysicalMemory)
 $ramSpeed = ($ramSticks | Measure-Object -Property Speed -Maximum).Maximum
 $ramStickCount = $ramSticks.Count
 $planRaw = (powercfg /getactivescheme)
-$powerPlan = if ($planRaw -match 'e9a42b02|Ultimate') { 'ultimate' } elseif ($planRaw -match '8c5e7fda|High') { 'high' } elseif ($planRaw -match 'a1841308|Power saver') { 'powersaver' } else { 'balanced' }
+$powerPlan = if ($planRaw -match 'e9a42b02|Ultimate|Максимальн') { 'ultimate' } elseif ($planRaw -match '8c5e7fda|High|Высок') { 'high' } elseif ($planRaw -match 'a1841308|Power saver|Эконом') { 'powersaver' } else { 'balanced' }
 $dvr = (Get-ItemProperty -Path "HKCU:\System\GameConfigStore" -Name "GameDVR_Enabled" -ErrorAction SilentlyContinue).GameDVR_Enabled
 $gm = (Get-ItemProperty -Path "HKCU:\Software\Microsoft\GameBar" -Name "AutoGameModeEnabled" -ErrorAction SilentlyContinue).AutoGameModeEnabled
 $hags = (Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\GraphicsDrivers" -Name "HwSchMode" -ErrorAction SilentlyContinue).HwSchMode
@@ -94,6 +110,7 @@ $vbsEnabled = ($null -ne $dg -and $dg.SecurityServicesRunning -contains 2)
 $mmPath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile"
 $netThrot = (Get-ItemProperty -Path $mmPath -Name "NetworkThrottlingIndex" -ErrorAction SilentlyContinue).NetworkThrottlingIndex
 $sysResp = (Get-ItemProperty -Path $mmPath -Name "SystemResponsiveness" -ErrorAction SilentlyContinue).SystemResponsiveness
+$gpuPrioVal = (Get-ItemProperty -Path "$mmPath\Tasks\Games" -Name "GPU Priority" -ErrorAction SilentlyContinue)."GPU Priority"
 $diagSvc = (Get-Service -Name "DiagTrack" -ErrorAction SilentlyContinue)
 $doMode = (Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\DeliveryOptimization\Config" -Name "DODownloadMode" -ErrorAction SilentlyContinue).DODownloadMode
 $sysDrive = Get-CimInstance Win32_LogicalDisk -Filter "DeviceID='C:'"
@@ -105,6 +122,11 @@ $win32Prio = (Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Pri
 $mpoVal = (Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\Dwm" -Name "OverlayTestMode" -ErrorAction SilentlyContinue).OverlayTestMode
 $usbVal = (Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\USB" -Name "DisableSelectiveSuspend" -ErrorAction SilentlyContinue).DisableSelectiveSuspend
 $hiberVal = (Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Power" -Name "HibernateEnabled" -ErrorAction SilentlyContinue).HibernateEnabled
+$ptVal = (Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling" -Name "PowerThrottlingOff" -ErrorAction SilentlyContinue).PowerThrottlingOff
+$transVal = (Get-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "EnableTransparency" -ErrorAction SilentlyContinue).EnableTransparency
+$uwpVal = (Get-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications" -Name "GlobalUserDisabled" -ErrorAction SilentlyContinue).GlobalUserDisabled
+$dnsServers = @(Get-DnsClientServerAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty ServerAddresses)
+$fastDns = ($dnsServers -contains '1.1.1.1' -or $dnsServers -contains '8.8.8.8' -or $dnsServers -contains '9.9.9.9')
 $nagleOn = $false
 Get-ChildItem "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces" -ErrorAction SilentlyContinue | ForEach-Object {
   $p = Get-ItemProperty -Path $_.PSPath -ErrorAction SilentlyContinue
@@ -124,6 +146,7 @@ $report = [ordered]@{
   mouseAccelEnabled = ($mouseSpeed -ne "0")
   vbsEnabled = [bool]$vbsEnabled
   networkTweaksApplied = ($netThrot -eq 4294967295 -and $sysResp -eq 0)
+  gpuPriorityHigh = ($gpuPrioVal -ge 6)
   diagTrackRunning = ($null -ne $diagSvc -and $diagSvc.Status -eq 'Running')
   deliveryOptP2P = ($doMode -ne 0)
   ssdFreePercent = $ssdFree
@@ -134,12 +157,17 @@ $report = [ordered]@{
   usbPowerSavingOff = ($usbVal -eq 1)
   nagleDisabled = $nagleOn
   hibernationDisabled = ($hiberVal -eq 0)
+  powerThrottlingOff = ($ptVal -eq 1)
+  transparencyDisabled = ($transVal -eq 0)
+  uwpBackgroundDisabled = ($uwpVal -eq 1)
+  fastDnsConfigured = $fastDns
 } | ConvertTo-Json -Compress
 
 Write-Output "OPTICORE:$report"
-Set-Clipboard -Value "OPTICORE:$report"
+Set-Clipboard -Value "OPTICORE:$report" -ErrorAction SilentlyContinue
 Write-Host ""
-Write-Host "Глубокий отчёт скопирован в буфер обмена! Вставь его на сайте OptiCore." -ForegroundColor Green`;
+Write-Host "Глубокий отчёт скопирован в буфер обмена! Вставь его на сайте OptiCore." -ForegroundColor Green
+if ($Host.Name -eq 'ConsoleHost') { Read-Host "Нажми Enter для выхода" }`;
 
 export function classifyGpu(renderer: string): {
   vendor: GpuVendor;
@@ -258,6 +286,11 @@ export function parseWindowsDiagReport(
       usbPowerSavingOff: readOptBool(parsed.usbPowerSavingOff),
       nagleDisabled: readOptBool(parsed.nagleDisabled),
       hibernationDisabled: readOptBool(parsed.hibernationDisabled),
+      powerThrottlingOff: readOptBool(parsed.powerThrottlingOff),
+      transparencyDisabled: readOptBool(parsed.transparencyDisabled),
+      uwpBackgroundDisabled: readOptBool(parsed.uwpBackgroundDisabled),
+      gpuPriorityHigh: readOptBool(parsed.gpuPriorityHigh),
+      fastDnsConfigured: readOptBool(parsed.fastDnsConfigured),
     };
 
     if (
@@ -294,6 +327,7 @@ export function getChecklistIdsFromWindowsReport(report: WindowsDiagReport): str
   if (report.mouseAccelEnabled === false) checked.push('mouse');
   if (report.gameDvrEnabled === false) checked.push('overlays');
   if (report.deliveryOptP2P === false) checked.push('delivery');
+  if (report.fastDnsConfigured === true) checked.push('dns');
   return checked;
 }
 
@@ -488,13 +522,265 @@ export function evaluatePcScan(input: HardwareScanInput): ScanEvaluation {
     });
   }
 
-  // 5. Deep Windows diagnostic checks (when report is attached)
+  // 5. Deep Windows diagnostic checks (real verified OS optimization state)
   const wr = input.windowsReport;
+  const verifiedChecks: VerifiedWindowsCheck[] = [];
+  let winEarned = 0;
+  let winPossible = 0;
+
+  const recordCheck = (
+    id: string,
+    label: string,
+    weight: number,
+    passed: boolean,
+    valueText: string,
+  ) => {
+    winPossible += weight;
+    if (passed) winEarned += weight;
+    verifiedChecks.push({ id, label, valueText, passed });
+  };
+
   if (wr) {
     checksCount += 12;
 
+    if (wr.powerPlan) {
+      const ok = wr.powerPlan === 'ultimate' || wr.powerPlan === 'high';
+      const labelMap: Record<string, string> = {
+        ultimate: 'Макс. производительность',
+        high: 'Высокая',
+        balanced: 'Сбалансированная',
+        powersaver: 'Экономия энергии',
+      };
+      recordCheck('power', 'Схема питания', 10, ok, labelMap[wr.powerPlan] || wr.powerPlan);
+    }
+
+    if (wr.powerThrottlingOff !== undefined) {
+      recordCheck(
+        'power_throttling',
+        'Power Throttling',
+        6,
+        wr.powerThrottlingOff,
+        wr.powerThrottlingOff ? 'Отключён' : 'Активен (сток)',
+      );
+      if (!wr.powerThrottlingOff) {
+        recommendations.push({
+          id: 'win-power-throttling',
+          priority: 'medium',
+          title: 'Включён системный Power Throttling Windows',
+          reason: 'Windows может снижать частоту потоков при фоновой или смешанной нагрузке.',
+          action: 'Примените твик «Отключить системный Power Throttling».',
+          fpsImpact: '+3–8% 1% Low',
+          moduleIds: ['disablePowerThrottling'],
+        });
+      }
+    }
+
+    if (wr.gameModeEnabled !== undefined) {
+      recordCheck(
+        'gamemode',
+        'Игровой режим',
+        5,
+        wr.gameModeEnabled,
+        wr.gameModeEnabled ? 'Включён' : 'Выключен',
+      );
+    }
+
+    if (wr.hagsEnabled !== undefined) {
+      recordCheck('hags', 'HAGS (GPU)', 6, wr.hagsEnabled, wr.hagsEnabled ? 'Включён' : 'Выключен');
+    }
+
+    if (wr.gameDvrEnabled !== undefined) {
+      recordCheck(
+        'gamedvr',
+        'Xbox GameDVR',
+        8,
+        !wr.gameDvrEnabled,
+        wr.gameDvrEnabled ? 'Включён (пишет фон)' : 'Отключён',
+      );
+    }
+
+    if (wr.networkTweaksApplied !== undefined || wr.gpuPriorityHigh !== undefined) {
+      const mmcssOk =
+        wr.networkTweaksApplied === true && wr.gpuPriorityHigh !== false;
+      recordCheck(
+        'mmcss',
+        'Приоритет MMCSS / GPU',
+        8,
+        mmcssOk,
+        mmcssOk ? 'Настроен' : 'Сток Windows',
+      );
+    }
+
+    if (wr.win32PrioritySep38 !== undefined) {
+      recordCheck(
+        'win32prio',
+        'Win32PrioritySeparation',
+        6,
+        wr.win32PrioritySep38,
+        wr.win32PrioritySep38 ? '38 (0x26)' : 'Сток Windows',
+      );
+      if (!wr.win32PrioritySep38) {
+        recommendations.push({
+          id: 'win-win32prio',
+          priority: 'medium',
+          title: 'Не настроен приоритет активного окна (Win32PrioritySeparation)',
+          reason: 'Стандартные длинные кванты планировщика менее отзывчивы в соревновательных играх.',
+          action: 'Примените модуль `win32PrioritySep` (значение 38 / 0x26).',
+          fpsImpact: '-1–3 мс Input Lag',
+          moduleIds: ['win32PrioritySep'],
+        });
+      }
+    }
+
+    if (wr.mpoDisabled !== undefined) {
+      recordCheck(
+        'mpo',
+        'MPO (OverlayTestMode)',
+        5,
+        wr.mpoDisabled,
+        wr.mpoDisabled ? 'Отключён (5)' : 'Включён (сток)',
+      );
+      if (!wr.mpoDisabled) {
+        recommendations.push({
+          id: 'win-mpo',
+          priority: 'medium',
+          title: 'Активен Multi-Plane Overlay (MPO)',
+          reason: 'MPO часто вызывает микрофризы и мерцания в DX11/DX12 играх и при Alt-Tab.',
+          action: 'Примените твик «Отключить MPO (OverlayTestMode=5)».',
+          fpsImpact: 'Плавнее 1% Low',
+          moduleIds: ['disableFullscreenOpt'],
+        });
+      }
+    }
+
+    if (wr.mouseAccelEnabled !== undefined) {
+      recordCheck(
+        'mouse',
+        'Акселерация мыши',
+        7,
+        !wr.mouseAccelEnabled,
+        wr.mouseAccelEnabled ? 'Включена' : 'Выключена (1:1)',
+      );
+    }
+
+    if (wr.usbPowerSavingOff !== undefined) {
+      recordCheck(
+        'usb',
+        'Энергосбережение USB',
+        5,
+        wr.usbPowerSavingOff,
+        wr.usbPowerSavingOff ? 'Отключено' : 'Включено (сток)',
+      );
+      if (!wr.usbPowerSavingOff) {
+        recommendations.push({
+          id: 'win-usb',
+          priority: 'medium',
+          title: 'Включено автоотключение питания USB-портов',
+          reason: 'Windows может переводить контроллер USB в сон и вызывать микрозадержки периферии.',
+          action: 'Примените твик `usbPowerSavingOff`.',
+          fpsImpact: 'Стабильный отклик мыши',
+          moduleIds: ['usbPowerSavingOff'],
+        });
+      }
+    }
+
+    if (wr.transparencyDisabled !== undefined) {
+      recordCheck(
+        'transparency',
+        'Прозрачность окон',
+        4,
+        wr.transparencyDisabled,
+        wr.transparencyDisabled ? 'Отключена' : 'Включена',
+      );
+    }
+
+    if (wr.uwpBackgroundDisabled !== undefined) {
+      recordCheck(
+        'uwp',
+        'Фоновые UWP',
+        4,
+        wr.uwpBackgroundDisabled,
+        wr.uwpBackgroundDisabled ? 'Запрещены' : 'Разрешены',
+      );
+    }
+
+    if (wr.diagTrackRunning !== undefined) {
+      recordCheck(
+        'diagtrack',
+        'Телеметрия DiagTrack',
+        5,
+        !wr.diagTrackRunning,
+        wr.diagTrackRunning ? 'Работает в фоне' : 'Остановлена',
+      );
+    }
+
+    if (wr.deliveryOptP2P !== undefined) {
+      recordCheck(
+        'p2p',
+        'P2P обновлений',
+        4,
+        !wr.deliveryOptP2P,
+        wr.deliveryOptP2P ? 'Включена' : 'Отключена',
+      );
+    }
+
+    if (wr.nagleDisabled !== undefined) {
+      recordCheck(
+        'nagle',
+        'Алгоритм Нагла',
+        5,
+        wr.nagleDisabled,
+        wr.nagleDisabled ? 'Отключён' : 'Включён (сток)',
+      );
+      if (!wr.nagleDisabled) {
+        recommendations.push({
+          id: 'win-nagle',
+          priority: 'medium',
+          title: 'Не отключён алгоритм Нагла на сетевых адаптерах',
+          reason: 'Сетевые пакеты буферизуются перед отправкой, увеличивая джиттер пинга.',
+          action: 'Примените твик `nagleDisable`.',
+          fpsImpact: 'Ниже джиттер пинга',
+          moduleIds: ['nagleDisable'],
+        });
+      }
+    }
+
+    if (wr.startupCount !== undefined) {
+      const startupOk = wr.startupCount <= 8;
+      const startupMid = wr.startupCount <= 14;
+      winPossible += 6;
+      if (startupOk) winEarned += 6;
+      else if (startupMid) winEarned += 3;
+      verifiedChecks.push({
+        id: 'startup',
+        label: 'Автозагрузка',
+        valueText: `${wr.startupCount} прогр.`,
+        passed: startupOk,
+      });
+    }
+
+    if (wr.ssdFreePercent !== undefined || wr.tempSizeMb !== undefined) {
+      const ssdOk = wr.ssdFreePercent === undefined || wr.ssdFreePercent >= 15;
+      const tempOk = wr.tempSizeMb === undefined || wr.tempSizeMb < 500;
+      winPossible += 6;
+      if (ssdOk && tempOk) winEarned += 6;
+      else if (ssdOk || tempOk) winEarned += 3;
+      verifiedChecks.push({
+        id: 'ssd_temp',
+        label: 'SSD C: и кэш Temp',
+        valueText: `${wr.ssdFreePercent ?? '?'}% свободно · ${wr.tempSizeMb ?? '?'} МБ`,
+        passed: ssdOk && tempOk,
+      });
+    }
+
     if (wr.ramStickCount === 1) {
       score -= 10;
+      verifiedChecks.push({
+        id: 'ram_channel',
+        label: 'Режим ОЗУ',
+        valueText: '1 планка (одноканал)',
+        passed: false,
+      });
       recommendations.push({
         id: 'win-single-channel',
         priority: 'high',
@@ -506,20 +792,31 @@ export function evaluatePcScan(input: HardwareScanInput): ScanEvaluation {
         fpsImpact: '+15–25% FPS',
         moduleIds: [],
       });
+    } else if (wr.ramStickCount && wr.ramStickCount >= 2) {
+      verifiedChecks.push({
+        id: 'ram_channel',
+        label: 'Режим ОЗУ',
+        valueText: `${wr.ramStickCount} планки (многоканал)`,
+        passed: true,
+      });
     }
 
-    if (wr.ramSpeedMhz && (wr.ramSpeedMhz <= 2400 || wr.ramSpeedMhz === 4800)) {
-      score -= 10;
-      recommendations.push({
-        id: 'win-xmp',
-        priority: 'high',
-        title: `ОЗУ работает на базовой частоте ${wr.ramSpeedMhz} МГц (XMP/EXPO выключен)`,
-        reason:
-          'Память DDR4 на 2133/2400 МГц или DDR5 на 4800 МГц ограничивает скорость CPU и вызывает просадки 1% Low FPS.',
-        action: 'Зайдите в BIOS (Del/F2 при старте ПК) и активируйте профиль XMP / DOCP / EXPO.',
-        fpsImpact: '+10–18% FPS',
-        moduleIds: [],
-      });
+    if (wr.ramSpeedMhz) {
+      const xmpOk = wr.ramSpeedMhz > 2400 && wr.ramSpeedMhz !== 4800;
+      recordCheck('xmp', 'Профиль ОЗУ (XMP)', 6, xmpOk, `${wr.ramSpeedMhz} МГц`);
+      if (!xmpOk) {
+        score -= 10;
+        recommendations.push({
+          id: 'win-xmp',
+          priority: 'high',
+          title: `ОЗУ работает на базовой частоте ${wr.ramSpeedMhz} МГц (XMP/EXPO выключен)`,
+          reason:
+            'Память DDR4 на 2133/2400 МГц или DDR5 на 4800 МГц ограничивает скорость CPU и вызывает просадки 1% Low FPS.',
+          action: 'Зайдите в BIOS (Del/F2 при старте ПК) и активируйте профиль XMP / DOCP / EXPO.',
+          fpsImpact: '+10–18% FPS',
+          moduleIds: [],
+        });
+      }
     }
 
     if (wr.powerPlan === 'balanced' || wr.powerPlan === 'powersaver') {
@@ -591,6 +888,15 @@ export function evaluatePcScan(input: HardwareScanInput): ScanEvaluation {
         action: 'Примените твики реестра `gameTweaks`, `gpuPriority` и `win32PrioritySep`.',
         fpsImpact: '+5–10% стабильности',
         moduleIds: ['gameTweaks', 'gpuPriority', 'win32PrioritySep'],
+      });
+    }
+
+    if (wr.vbsEnabled !== undefined) {
+      verifiedChecks.push({
+        id: 'vbs',
+        label: 'Изоляция ядра (VBS)',
+        valueText: wr.vbsEnabled ? 'Включена (-FPS)' : 'Выключена',
+        passed: !wr.vbsEnabled,
       });
     }
 
@@ -670,13 +976,13 @@ export function evaluatePcScan(input: HardwareScanInput): ScanEvaluation {
   } else if (input.isWindows) {
     recommendations.push({
       id: 'win-baseline',
-      priority: 'medium',
-      title: 'Рекомендуемый пакет системной оптимизации Windows',
+      priority: 'high',
+      title: 'Не проверены реальные настройки оптимизации Windows',
       reason:
-        'Браузер не видит настройки реестра Windows (HAGS, XMP, схему питания, GameDVR и кэш Temp), но их легко проверить read-only скриптом PowerShell ниже или оптимизировать сразу.',
+        'Браузер по правилам безопасности не имеет доступа к реестру, схеме питания, GameDVR, HAGS, XMP и службам Windows. Без PowerShell-проверки невозможно назвать честный % оптимизации.',
       action:
-        'Запустите глубокий скан PowerShell или сразу примените безопасный набор твиков.',
-      fpsImpact: '+10–22% стабильности',
+        'Откройте панель «Глубокая диагностика Windows (PowerShell)» ниже, скопируйте/скачайте скрипт и вставьте результат OPTICORE:{...}.',
+      fpsImpact: 'Точный диагноз ОС',
       moduleIds: [
         'restorePoint',
         'ultimatePower',
@@ -704,26 +1010,44 @@ export function evaluatePcScan(input: HardwareScanInput): ScanEvaluation {
     });
   }
 
-  const clampedScore = Math.max(15, Math.min(98, Math.round(score)));
+  const hardwareScore = Math.max(15, Math.min(98, Math.round(score)));
+  const windowsVerified = Boolean(wr && winPossible > 0);
+  const optimizationScore = windowsVerified
+    ? Math.max(0, Math.min(100, Math.round((winEarned / winPossible) * 100)))
+    : null;
 
-  let verdictBadge = 'Требует внимания';
-  let verdictTitle = 'Есть заметный резерв для роста FPS';
+  // Honest primary score: when Windows is verified, show REAL OS optimization %;
+  // when not verified, show hardware readiness without falsely claiming Windows is 92% optimized!
+  const effectiveScore = optimizationScore !== null ? optimizationScore : hardwareScore;
+
+  let verdictBadge = 'Требует настройки';
+  let verdictTitle = 'Есть большой резерв оптимизации Windows';
   let verdictDescription =
-    'Обнаруженные ограничения снижают плавность и отклик в играх — выполните приоритетные пункты и примените подобранный скрипт.';
+    'Проверенные параметры системы показывают, что многие игровые настройки стоят в стоке. Выполните рекомендации ниже и примените скрипт.';
   let estimatedFpsGain = '+15–35% FPS';
 
-  if (clampedScore >= 82) {
-    verdictBadge = 'Отличное состояние';
-    verdictTitle = 'Железо в отличной форме — нужна лишь тонкая настройка';
+  if (!windowsVerified) {
+    verdictBadge = input.isWindows ? 'Оптимизация ОС не проверена' : 'Оценка по браузеру';
+    verdictTitle =
+      hardwareScore >= 78
+        ? 'Железо готово, но настройки Windows ещё не проверены'
+        : 'Обнаружены аппаратные или кадровые ограничения';
+    verdictDescription = input.isWindows
+      ? `Браузер оценил базу (GPU, CPU, ${input.measuredHz} Гц, фреймтайм) на ${hardwareScore}/100, но не видит реестр и службы Windows. Запустите read-only скрипт PowerShell ниже, чтобы узнать честный % оптимизации ПК.`
+      : 'Оценка выполнена по параметрам, доступным из браузера (GPU, потоки CPU, герцовка и фреймтайм).';
+    estimatedFpsGain = hardwareScore >= 78 ? 'Зависит от ОС' : '+15–35% FPS';
+  } else if (optimizationScore !== null && optimizationScore >= 82) {
+    verdictBadge = 'Отлично оптимизирован';
+    verdictTitle = 'Система реально настроена на высокий FPS и низкую задержку';
     verdictDescription =
-      'Аппаратная база сбалансирована. Точечные твики Windows и настройка драйвера помогут стабилизировать 1% Low FPS и снизить Input Lag.';
-    estimatedFpsGain = '+8–15% 1% Low';
-  } else if (clampedScore >= 62) {
-    verdictBadge = 'Хорошая база';
-    verdictTitle = 'Система работает нормально, но теряет часть производительности';
+      'Большинство системных параметров, питание CPU, планировщик GPU и сетевые твики проверены и активны.';
+    estimatedFpsGain = '+2–8% 1% Low';
+  } else if (optimizationScore !== null && optimizationScore >= 55) {
+    verdictBadge = 'Частично оптимизирован';
+    verdictTitle = 'База настроена, но часть твиков Windows ещё в стоке';
     verdictDescription =
-      'Выполните приоритетные рекомендации ниже и примените безопасный скрипт — это уберёт фоновые просадки и ускорит отклик.';
-    estimatedFpsGain = '+12–25% FPS';
+      'Докрутите оставшиеся пункты ниже — это уберёт фоновые просадки 1% Low и снизит Input Lag.';
+    estimatedFpsGain = '+10–20% FPS';
   }
 
   const priorityRank: Record<RecommendationPriority, number> = {
@@ -745,13 +1069,17 @@ export function evaluatePcScan(input: HardwareScanInput): ScanEvaluation {
   }
 
   return {
-    score: clampedScore,
+    score: effectiveScore,
+    hardwareScore,
+    optimizationScore,
+    windowsVerified,
     checksCount,
     verdictBadge,
     verdictTitle,
     verdictDescription,
     estimatedFpsGain,
     gpuInfo,
+    verifiedChecks,
     recommendations,
     recommendedModuleIds: Array.from(moduleSet),
   };

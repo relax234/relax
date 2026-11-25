@@ -58,7 +58,7 @@ function OptStatePill({
     ? 'text-emerald-300 border-emerald-500/35 bg-emerald-500/10'
     : isOff
       ? 'text-rose-300 border-rose-500/30 bg-rose-500/10'
-      : 'text-slate-400 border-slate-700/80 bg-slate-900/70';
+      : 'text-zinc-400 border-zinc-700 bg-zinc-900/80';
 
   const icon = isOn ? (
     <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
@@ -175,38 +175,38 @@ export function CompareSection({
   return (
     <section
       id="compare"
-      className="py-16 px-4 sm:px-6 border-t border-slate-800/70"
+      className="py-9 sm:py-11 px-4 sm:px-6 border-t border-zinc-800/80"
     >
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-5 mb-10">
+        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 mb-6">
           <div>
-            <div className="text-xs font-mono text-violet-400 tracking-wide">
+            <div className="text-xs font-mono text-zinc-400 tracking-wide">
               02 · Сравнение систем и твиков
             </div>
-            <h2 className="text-3xl font-bold mt-1.5 text-white">
+            <h2 className="text-2xl sm:text-3xl font-bold mt-1 text-white">
               Сравнение твоего ПК с ПК друга
             </h2>
-            <p className="text-slate-400 text-sm mt-2 max-w-2xl">
-              Сверь видеокарту, герцовку и стабильность кадров, а главное — наглядно посмотри,
-              какие оптимизации врублены у тебя и какие включены у друга.
+            <p className="text-zinc-400 text-sm mt-1 max-w-2xl">
+              Сверь видеокарту, герцовку и стабильность кадров, а также посмотри, какие оптимизации
+              врублены у тебя и какие включены у друга.
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 text-xs font-mono text-slate-400">
-            <Users className="w-4 h-4 text-cyan-400 shrink-0" />
-            <span>Работает по прямой ссылке, коду OC1 или отчёту PowerShell</span>
+          <div className="flex flex-wrap items-center gap-2 text-xs font-mono text-zinc-400">
+            <Users className="w-4 h-4 text-white shrink-0" />
+            <span>По ссылке, коду OC1 или отчёту PowerShell</span>
           </div>
         </div>
 
         {/* Two Side-by-Side Profile Setup Cards */}
-        <div className="grid lg:grid-cols-2 gap-6 items-stretch mb-8">
+        <div className="grid lg:grid-cols-2 gap-4 items-stretch mb-5">
           {/* LEFT: MY PC */}
-          <div className="p-6 rounded-2xl bg-[#0C1220] border border-slate-800/90 flex flex-col justify-between gap-5">
-            <div className="space-y-4">
+          <div className="p-4 sm:p-5 rounded-2xl bg-[#111113] border border-zinc-800 flex flex-col justify-between gap-4">
+            <div className="space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="min-w-0 flex-1">
-                  <label htmlFor="my-pc-name" className="block text-[11px] font-mono text-cyan-400 mb-1">
+                  <label htmlFor="my-pc-name" className="block text-[11px] font-mono text-zinc-400 mb-1">
                     Твой профиль
                   </label>
                   <input
@@ -216,10 +216,10 @@ export function CompareSection({
                     value={myName}
                     onChange={(e) => onMyNameChange(e.target.value)}
                     placeholder="Мой ПК"
-                    className="w-full max-w-xs px-3 py-1.5 rounded-lg bg-[#060911] border border-slate-700/80 focus:border-cyan-400 focus:outline-none text-sm font-bold text-white"
+                    className="w-full max-w-xs px-3 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700 focus:border-white focus:outline-none text-sm font-bold text-white"
                   />
                 </div>
-                <div className="text-xs font-mono text-slate-400 text-right">
+                <div className="text-xs font-mono text-zinc-400 text-right">
                   {mySnapshot ? (
                     <span className="text-emerald-300">Готов к сравнению</span>
                   ) : (
@@ -229,59 +229,59 @@ export function CompareSection({
               </div>
 
               {mySnapshot ? (
-                <div className="space-y-3">
-                  <div className="grid grid-cols-3 gap-3 py-3 border-y border-slate-800/80">
+                <div className="space-y-2.5">
+                  <div className="grid grid-cols-3 gap-3 py-2.5 border-y border-zinc-800">
                     <div>
-                      <div className="text-[11px] font-mono text-slate-400">Индекс</div>
-                      <div className="text-lg font-extrabold text-cyan-400 font-mono tabular-nums mt-0.5">
+                      <div className="text-[11px] font-mono text-zinc-400">Индекс</div>
+                      <div className="text-lg font-extrabold text-white font-mono tabular-nums mt-0.5">
                         {mySnapshot.hw.score}/100
                       </div>
                     </div>
                     <div>
-                      <div className="text-[11px] font-mono text-slate-400">Экран</div>
+                      <div className="text-[11px] font-mono text-zinc-400">Экран</div>
                       <div className="text-lg font-extrabold text-white font-mono tabular-nums mt-0.5">
                         {mySnapshot.hw.hz} Гц
                       </div>
                     </div>
                     <div>
-                      <div className="text-[11px] font-mono text-slate-400">Оптимизация</div>
-                      <div className="text-lg font-extrabold text-emerald-400 font-mono tabular-nums mt-0.5">
+                      <div className="text-[11px] font-mono text-zinc-400">Оптимизация</div>
+                      <div className="text-lg font-extrabold text-emerald-300 font-mono tabular-nums mt-0.5">
                         {countEnabledOpts(mySnapshot)}/12
                       </div>
                     </div>
                   </div>
-                  <div className="text-xs text-slate-300 space-y-1">
+                  <div className="text-xs text-zinc-300 space-y-1">
                     <div className="truncate" title={mySnapshot.hw.gpu}>
-                      <span className="text-slate-500">GPU: </span>
+                      <span className="text-zinc-500">GPU: </span>
                       {mySnapshot.hw.gpu}
                     </div>
                     <div className="truncate" title={mySnapshot.hw.cpu}>
-                      <span className="text-slate-500">CPU: </span>
+                      <span className="text-zinc-500">CPU: </span>
                       {mySnapshot.hw.cpu}
-                      <span className="text-slate-600 mx-1.5" aria-hidden="true">
+                      <span className="text-zinc-600 mx-1.5" aria-hidden="true">
                         ·
                       </span>
-                      <span className="text-slate-400">
+                      <span className="text-zinc-400">
                         {mySnapshot.hw.hasWinReport ? 'PowerShell-отчёт' : 'Браузер + чек-лист'}
                       </span>
                     </div>
                   </div>
                 </div>
               ) : (
-                <div className="p-4 rounded-xl bg-[#060911]/80 border border-slate-800 text-xs text-slate-400 leading-relaxed">
+                <div className="p-3.5 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-zinc-400 leading-relaxed">
                   Нажми «Просканировать мой ПК», чтобы зафиксировать характеристики твоего железа
                   и собрать ссылку-приглашение для друга.
                 </div>
               )}
             </div>
 
-            <div className="flex flex-wrap items-center gap-2.5 pt-2 border-t border-slate-800/70">
+            <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-zinc-800">
               {!mySnapshot ? (
                 <button
                   type="button"
                   onClick={() => void onRunScan()}
                   disabled={scanning}
-                  className="px-4 py-2.5 rounded-xl bg-cyan-400 hover:bg-cyan-300 disabled:opacity-60 text-slate-950 font-bold text-xs sm:text-sm glow-btn inline-flex items-center gap-2 cursor-pointer whitespace-nowrap"
+                  className="px-4 py-2 rounded-xl bg-white hover:bg-zinc-200 disabled:opacity-60 text-zinc-950 font-bold text-xs sm:text-sm glow-btn inline-flex items-center gap-2 cursor-pointer whitespace-nowrap"
                 >
                   <Play className="w-4 h-4" />
                   <span>{scanning ? 'Идёт скан...' : 'Просканировать мой ПК'}</span>
@@ -291,7 +291,7 @@ export function CompareSection({
                   <button
                     type="button"
                     onClick={handleCopyShareLink}
-                    className="px-4 py-2 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-bold text-xs glow-btn inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+                    className="px-3.5 py-2 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 font-bold text-xs glow-btn inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
                   >
                     {copiedType === 'link' ? (
                       <Check className="w-3.5 h-3.5" />
@@ -305,10 +305,10 @@ export function CompareSection({
                   <button
                     type="button"
                     onClick={handleCopyShareCode}
-                    className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium text-xs transition inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+                    className="px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-700 hover:bg-zinc-800 text-zinc-200 font-medium text-xs transition inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
                   >
                     {copiedType === 'code' ? (
-                      <Check className="w-3.5 h-3.5 text-emerald-400" />
+                      <Check className="w-3.5 h-3.5 text-emerald-300" />
                     ) : (
                       <Copy className="w-3.5 h-3.5" />
                     )}
@@ -320,68 +320,68 @@ export function CompareSection({
           </div>
 
           {/* RIGHT: FRIEND PC */}
-          <div className="p-6 rounded-2xl bg-[#0C1220] border border-slate-800/90 flex flex-col justify-between gap-5">
+          <div className="p-4 sm:p-5 rounded-2xl bg-[#111113] border border-zinc-800 flex flex-col justify-between gap-4">
             {friendSnapshot && !editingFriend ? (
               <>
-                <div className="space-y-4">
+                <div className="space-y-3">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="text-[11px] font-mono text-violet-400 mb-1">
+                      <div className="text-[11px] font-mono text-zinc-400 mb-0.5">
                         Профиль друга
                       </div>
                       <h3 className="text-lg font-bold text-white truncate">
                         {friendSnapshot.name}
                       </h3>
                     </div>
-                    <div className="text-xs font-mono text-slate-400">
+                    <div className="text-xs font-mono text-zinc-400">
                       {friendSnapshot.isDemo ? 'Демо-профиль' : 'Загружен'}
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-3 py-3 border-y border-slate-800/80">
+                  <div className="grid grid-cols-3 gap-3 py-2.5 border-y border-zinc-800">
                     <div>
-                      <div className="text-[11px] font-mono text-slate-400">Индекс</div>
-                      <div className="text-lg font-extrabold text-violet-300 font-mono tabular-nums mt-0.5">
+                      <div className="text-[11px] font-mono text-zinc-400">Индекс</div>
+                      <div className="text-lg font-extrabold text-zinc-100 font-mono tabular-nums mt-0.5">
                         {friendSnapshot.hw.score}/100
                       </div>
                     </div>
                     <div>
-                      <div className="text-[11px] font-mono text-slate-400">Экран</div>
+                      <div className="text-[11px] font-mono text-zinc-400">Экран</div>
                       <div className="text-lg font-extrabold text-white font-mono tabular-nums mt-0.5">
                         {friendSnapshot.hw.hz} Гц
                       </div>
                     </div>
                     <div>
-                      <div className="text-[11px] font-mono text-slate-400">Оптимизация</div>
-                      <div className="text-lg font-extrabold text-emerald-400 font-mono tabular-nums mt-0.5">
+                      <div className="text-[11px] font-mono text-zinc-400">Оптимизация</div>
+                      <div className="text-lg font-extrabold text-emerald-300 font-mono tabular-nums mt-0.5">
                         {countEnabledOpts(friendSnapshot)}/12
                       </div>
                     </div>
                   </div>
 
-                  <div className="text-xs text-slate-300 space-y-1">
+                  <div className="text-xs text-zinc-300 space-y-1">
                     <div className="truncate" title={friendSnapshot.hw.gpu}>
-                      <span className="text-slate-500">GPU: </span>
+                      <span className="text-zinc-500">GPU: </span>
                       {friendSnapshot.hw.gpu}
                     </div>
                     <div className="truncate" title={friendSnapshot.hw.cpu}>
-                      <span className="text-slate-500">CPU: </span>
+                      <span className="text-zinc-500">CPU: </span>
                       {friendSnapshot.hw.cpu}
-                      <span className="text-slate-600 mx-1.5" aria-hidden="true">
+                      <span className="text-zinc-600 mx-1.5" aria-hidden="true">
                         ·
                       </span>
-                      <span className="text-slate-400">
+                      <span className="text-zinc-400">
                         {friendSnapshot.hw.hasWinReport ? 'PowerShell-отчёт' : 'Скан браузера'}
                       </span>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2.5 pt-2 border-t border-slate-800/70">
+                <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-zinc-800">
                   <button
                     type="button"
                     onClick={() => setEditingFriend(true)}
-                    className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium text-xs transition inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+                    className="px-3.5 py-2 rounded-xl bg-zinc-900 border border-zinc-700 hover:bg-zinc-800 text-zinc-200 font-medium text-xs transition inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
                   >
                     <Share2 className="w-3.5 h-3.5" />
                     <span>Вставить другой код</span>
@@ -392,7 +392,7 @@ export function CompareSection({
                       setEditingFriend(false);
                       onClearFriend();
                     }}
-                    className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-rose-300 font-medium text-xs transition inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+                    className="px-3.5 py-2 rounded-xl bg-zinc-950 hover:bg-zinc-800 border border-zinc-800 text-zinc-400 hover:text-rose-300 font-medium text-xs transition inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
                     <span>Сбросить</span>
@@ -401,11 +401,11 @@ export function CompareSection({
               </>
             ) : (
               <>
-                <div className="space-y-3">
+                <div className="space-y-2.5">
                   <div className="flex items-center justify-between gap-3">
                     <label
                       htmlFor="friend-profile-input"
-                      className="text-xs font-mono text-violet-400"
+                      className="text-xs font-mono text-zinc-300"
                     >
                       Загрузить ПК друга (ссылка, код OC1:... или OPTICORE:{'{...}'})
                     </label>
@@ -416,7 +416,7 @@ export function CompareSection({
                           setEditingFriend(false);
                           setPasteError(null);
                         }}
-                        className="text-xs text-slate-400 hover:text-white cursor-pointer"
+                        className="text-xs text-zinc-400 hover:text-white cursor-pointer"
                       >
                         Отмена
                       </button>
@@ -425,14 +425,14 @@ export function CompareSection({
 
                   <textarea
                     id="friend-profile-input"
-                    rows={4}
+                    rows={3}
                     value={pasteInput}
                     onChange={(e) => {
                       setPasteInput(e.target.value);
                       if (pasteError) setPasteError(null);
                     }}
                     placeholder="Вставь ссылку от друга (?pc=OC1:...), короткий код OC1:... или вывод PowerShell OPTICORE:{...}"
-                    className="w-full p-3 rounded-xl bg-[#060911] border border-slate-700/90 focus:border-violet-400 focus:outline-none text-xs font-mono text-slate-100 placeholder:text-slate-600"
+                    className="w-full p-3 rounded-xl bg-zinc-950 border border-zinc-700 focus:border-white focus:outline-none text-xs font-mono text-zinc-100 placeholder:text-zinc-600"
                   />
 
                   {pasteError && (
@@ -445,11 +445,11 @@ export function CompareSection({
                   )}
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2.5 pt-2 border-t border-slate-800/70">
+                <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-zinc-800">
                   <button
                     type="button"
                     onClick={handleImportFriend}
-                    className="px-4 py-2 rounded-xl bg-violet-500 hover:bg-violet-400 text-white font-bold text-xs transition inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+                    className="px-4 py-2 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 font-bold text-xs transition inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
                   >
                     <span>Сравнить ПК</span>
                     <ArrowRight className="w-3.5 h-3.5" />
@@ -457,7 +457,7 @@ export function CompareSection({
                   <button
                     type="button"
                     onClick={handleLoadDemoFriend}
-                    className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 font-medium text-xs transition inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+                    className="px-3.5 py-2 rounded-xl bg-zinc-900 border border-zinc-700 hover:bg-zinc-800 text-zinc-200 font-medium text-xs transition inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
                   >
                     <Sparkles className="w-3.5 h-3.5" />
                     <span>Загрузить пример друга</span>
@@ -470,12 +470,12 @@ export function CompareSection({
 
         {/* Prompt if friend loaded, waiting for user's own scan */}
         {friendSnapshot && !mySnapshot && (
-          <div className="p-6 rounded-2xl bg-[#0C1220] border border-cyan-500/40 glow-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="p-4 sm:p-5 rounded-2xl bg-[#111113] border border-zinc-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="space-y-1">
               <div className="text-base font-bold text-white">
                 Профиль «{friendSnapshot.name}» загружен — остался только твой скан
               </div>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-zinc-400">
                 Запусти быстрый тест своего ПК, чтобы сразу увидеть таблицу сравнения железа и
                 включённых оптимизаций.
               </p>
@@ -484,7 +484,7 @@ export function CompareSection({
               type="button"
               onClick={() => void onRunScan()}
               disabled={scanning}
-              className="px-5 py-2.5 rounded-xl bg-cyan-400 hover:bg-cyan-300 disabled:opacity-60 text-slate-950 font-bold text-xs sm:text-sm glow-btn inline-flex items-center gap-2 cursor-pointer whitespace-nowrap shrink-0"
+              className="px-4 py-2.5 rounded-xl bg-white hover:bg-zinc-200 disabled:opacity-60 text-zinc-950 font-bold text-xs sm:text-sm glow-btn inline-flex items-center gap-2 cursor-pointer whitespace-nowrap shrink-0"
             >
               <Play className="w-4 h-4" />
               <span>{scanning ? 'Идёт скан...' : 'Просканировать мой ПК'}</span>
@@ -494,38 +494,38 @@ export function CompareSection({
 
         {/* Full Side-by-Side Comparison Board */}
         {mySnapshot && friendSnapshot && comparison && (
-          <div data-testid="compare-results" className="space-y-6">
+          <div data-testid="compare-results" className="space-y-4">
             {/* Summary Verdict Banner */}
-            <div className="p-6 rounded-2xl bg-[#0C1220] border border-slate-800/90 glow-border flex flex-col lg:flex-row lg:items-center justify-between gap-5">
-              <div className="space-y-1.5">
+            <div className="p-4 sm:p-5 rounded-2xl bg-[#111113] border border-zinc-800 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+              <div className="space-y-1">
                 <div className="flex flex-wrap items-center gap-2 text-xs font-mono">
-                  <span className="text-cyan-300 font-semibold">{mySnapshot.name}</span>
-                  <span className="text-slate-600" aria-hidden="true">
+                  <span className="text-white font-semibold">{mySnapshot.name}</span>
+                  <span className="text-zinc-600" aria-hidden="true">
                     vs
                   </span>
-                  <span className="text-violet-300 font-semibold">{friendSnapshot.name}</span>
-                  <span className="text-slate-600" aria-hidden="true">
+                  <span className="text-zinc-300 font-semibold">{friendSnapshot.name}</span>
+                  <span className="text-zinc-600" aria-hidden="true">
                     ·
                   </span>
                   <span className="text-emerald-300 tabular-nums">
                     Оптимизации: {comparison.myOnCount}/12 против {comparison.friendOnCount}/12
                   </span>
                 </div>
-                <h3 className="text-xl font-bold text-white">
+                <h3 className="text-lg sm:text-xl font-bold text-white">
                   {comparison.onlyFriendOnCount > 0
                     ? `У друга включено ${comparison.onlyFriendOnCount} оптимизаций, которых ещё нет у тебя`
                     : comparison.onlyMeOnCount > 0
                       ? `Твой ПК настроен лучше на ${comparison.onlyMeOnCount} пунктов оптимизации`
                       : 'Системы настроены примерно на одном уровне'}
                 </h3>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-zinc-400">
                   Любой пункт у себя можно переключить прямо в таблице ниже — профиль и ссылка для
                   друга обновятся автоматически.
                 </p>
               </div>
 
               {comparison.missingForMeModuleIds.length > 0 && (
-                <div className="flex flex-col items-start lg:items-end gap-1.5 shrink-0">
+                <div className="flex flex-col items-start lg:items-end gap-1 shrink-0">
                   <button
                     type="button"
                     onClick={() => {
@@ -533,7 +533,7 @@ export function CompareSection({
                       onAddModulesToGenerator(comparison.missingForMeModuleIds);
                       window.setTimeout(() => setImportedNotice(false), 2500);
                     }}
-                    className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs sm:text-sm transition inline-flex items-center gap-2 cursor-pointer whitespace-nowrap"
+                    className="px-4 py-2.5 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 font-bold text-xs sm:text-sm transition inline-flex items-center gap-2 cursor-pointer whitespace-nowrap"
                   >
                     <span>
                       {importedNotice
@@ -542,7 +542,7 @@ export function CompareSection({
                     </span>
                     <ArrowRight className="w-4 h-4" />
                   </button>
-                  <span className="text-[11px] font-mono text-slate-400">
+                  <span className="text-[11px] font-mono text-zinc-400">
                     Скопирует в генератор всё, что включено у друга
                   </span>
                 </div>
@@ -550,10 +550,12 @@ export function CompareSection({
             </div>
 
             {/* Part A: Hardware & FPS Metrics Table */}
-            <div className="rounded-2xl bg-[#0C1220] border border-slate-800/90 overflow-hidden">
-              <div className="px-5 py-4 border-b border-slate-800/80 flex flex-wrap items-center justify-between gap-2">
-                <h3 className="text-base font-bold text-white">Железо и показатели FPS</h3>
-                <span className="text-xs font-mono text-slate-400">
+            <div className="rounded-2xl bg-[#111113] border border-zinc-800 overflow-hidden">
+              <div className="px-4 sm:px-5 py-3 border-b border-zinc-800 flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-sm sm:text-base font-bold text-white">
+                  Железо и показатели FPS
+                </h3>
+                <span className="text-xs font-mono text-zinc-400">
                   Сравнение ключевых узлов и плавности кадров
                 </span>
               </div>
@@ -561,39 +563,39 @@ export function CompareSection({
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse text-xs sm:text-sm">
                   <thead>
-                    <tr className="border-b border-slate-800/80 text-[11px] font-mono text-slate-400 bg-[#080D18]">
-                      <th className="py-3 px-4 sm:px-5 font-medium">Параметр</th>
-                      <th className="py-3 px-4 font-medium text-cyan-300">{mySnapshot.name}</th>
-                      <th className="py-3 px-4 font-medium text-violet-300">
+                    <tr className="border-b border-zinc-800 text-[11px] font-mono text-zinc-400 bg-zinc-950">
+                      <th className="py-2.5 px-4 sm:px-5 font-medium">Параметр</th>
+                      <th className="py-2.5 px-4 font-medium text-white">{mySnapshot.name}</th>
+                      <th className="py-2.5 px-4 font-medium text-zinc-300">
                         {friendSnapshot.name}
                       </th>
-                      <th className="py-3 px-4 sm:px-5 font-medium text-right">Итог</th>
+                      <th className="py-2.5 px-4 sm:px-5 font-medium text-right">Итог</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800/70">
+                  <tbody className="divide-y divide-zinc-800/80">
                     {comparison.hardwareRows.map((row) => (
-                      <tr key={row.id} className="hover:bg-slate-900/40 transition-colors">
-                        <td className="py-3.5 px-4 sm:px-5 align-top">
+                      <tr key={row.id} className="hover:bg-zinc-900/40 transition-colors">
+                        <td className="py-3 px-4 sm:px-5 align-top">
                           <div className="font-semibold text-white">{row.label}</div>
-                          <div className="text-[11px] text-slate-400 mt-0.5">{row.note}</div>
+                          <div className="text-[11px] text-zinc-400 mt-0.5">{row.note}</div>
                         </td>
-                        <td className="py-3.5 px-4 font-mono tabular-nums text-slate-100 align-top">
+                        <td className="py-3 px-4 font-mono tabular-nums text-zinc-100 align-top">
                           {row.myValue}
                         </td>
-                        <td className="py-3.5 px-4 font-mono tabular-nums text-slate-200 align-top">
+                        <td className="py-3 px-4 font-mono tabular-nums text-zinc-300 align-top">
                           {row.friendValue}
                         </td>
-                        <td className="py-3.5 px-4 sm:px-5 text-right align-top whitespace-nowrap">
+                        <td className="py-3 px-4 sm:px-5 text-right align-top whitespace-nowrap">
                           {row.leader === 'me' ? (
                             <span className="text-xs font-mono font-semibold text-emerald-300">
                               Ты впереди
                             </span>
                           ) : row.leader === 'friend' ? (
-                            <span className="text-xs font-mono font-semibold text-violet-300">
+                            <span className="text-xs font-mono font-semibold text-amber-300">
                               Друг впереди
                             </span>
                           ) : (
-                            <span className="text-xs font-mono text-slate-400">Паритет</span>
+                            <span className="text-xs font-mono text-zinc-400">Паритет</span>
                           )}
                         </td>
                       </tr>
@@ -604,13 +606,13 @@ export function CompareSection({
             </div>
 
             {/* Part B: Optimization Matrix (What's Enabled for Me vs Friend) */}
-            <div className="rounded-2xl bg-[#0C1220] border border-slate-800/90 overflow-hidden">
-              <div className="px-5 py-4 border-b border-slate-800/80 flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div className="rounded-2xl bg-[#111113] border border-zinc-800 overflow-hidden">
+              <div className="px-4 sm:px-5 py-3.5 border-b border-zinc-800 flex flex-col md:flex-row md:items-center justify-between gap-3">
                 <div>
-                  <h3 className="text-base font-bold text-white">
+                  <h3 className="text-sm sm:text-base font-bold text-white">
                     Что врублено насчёт оптимизации
                   </h3>
-                  <p className="text-xs text-slate-400 mt-0.5">
+                  <p className="text-xs text-zinc-400 mt-0.5">
                     Нажми на свой статус справа, чтобы отметить уже выполненную настройку на своём ПК.
                   </p>
                 </div>
@@ -618,7 +620,7 @@ export function CompareSection({
                 <div
                   role="tablist"
                   aria-label="Фильтр оптимизаций в сравнении"
-                  className="inline-flex flex-wrap items-center gap-1 p-1 rounded-lg bg-[#080D18] border border-slate-800"
+                  className="inline-flex flex-wrap items-center gap-1 p-1 rounded-lg bg-zinc-950 border border-zinc-800"
                 >
                   {(
                     [
@@ -639,8 +641,8 @@ export function CompareSection({
                       onClick={() => setOptFilter(tab.id)}
                       className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors whitespace-nowrap cursor-pointer ${
                         optFilter === tab.id
-                          ? 'bg-cyan-400 text-slate-950 font-semibold'
-                          : 'text-slate-400 hover:text-white'
+                          ? 'bg-white text-zinc-950 font-semibold'
+                          : 'text-zinc-400 hover:text-white'
                       }`}
                     >
                       {tab.label}
@@ -650,25 +652,25 @@ export function CompareSection({
               </div>
 
               {filteredOptRows.length === 0 ? (
-                <div className="p-6 text-sm text-slate-400">
+                <div className="p-5 text-sm text-zinc-400">
                   По выбранному фильтру отличий не найдено — переключитесь на вкладку «Все».
                 </div>
               ) : (
-                <div className="divide-y divide-slate-800/75">
+                <div className="divide-y divide-zinc-800/80">
                   {filteredOptRows.map((row) => {
                     const nextState = row.mine !== 'on';
                     return (
                       <div
                         key={row.meta.id}
-                        className="px-5 py-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4 hover:bg-slate-900/35 transition-colors"
+                        className="px-4 sm:px-5 py-3 flex flex-col lg:flex-row lg:items-center justify-between gap-3 hover:bg-zinc-900/35 transition-colors"
                       >
                         <div className="min-w-0 flex-1">
                           <div className="text-sm font-semibold text-white">{row.meta.title}</div>
-                          <div className="text-xs text-slate-400 mt-0.5">
-                            <span className="font-mono text-[11px] text-slate-500">
+                          <div className="text-xs text-zinc-400 mt-0.5">
+                            <span className="font-mono text-[11px] text-zinc-500">
                               {row.meta.category}
                             </span>
-                            <span className="text-slate-600 mx-1.5" aria-hidden="true">
+                            <span className="text-zinc-600 mx-1.5" aria-hidden="true">
                               ·
                             </span>
                             <span>{row.meta.desc}</span>
@@ -676,8 +678,8 @@ export function CompareSection({
                         </div>
 
                         <div className="flex flex-wrap items-center gap-3 sm:gap-4 shrink-0">
-                          <div className="flex items-center justify-between sm:justify-start gap-2 min-w-[165px]">
-                            <span className="text-[11px] font-mono text-cyan-300/90">У меня:</span>
+                          <div className="flex items-center justify-between sm:justify-start gap-2 min-w-[160px]">
+                            <span className="text-[11px] font-mono text-zinc-300">У меня:</span>
                             <OptStatePill
                               state={row.mine}
                               interactive
@@ -686,8 +688,8 @@ export function CompareSection({
                             />
                           </div>
 
-                          <div className="flex items-center justify-between sm:justify-start gap-2 min-w-[172px]">
-                            <span className="text-[11px] font-mono text-violet-300/90">
+                          <div className="flex items-center justify-between sm:justify-start gap-2 min-w-[166px]">
+                            <span className="text-[11px] font-mono text-zinc-400">
                               У друга:
                             </span>
                             <OptStatePill state={row.friend} />
@@ -698,7 +700,7 @@ export function CompareSection({
                               <button
                                 type="button"
                                 onClick={() => onAddModulesToGenerator(row.meta.moduleIds)}
-                                className="px-2.5 py-1 rounded-md bg-slate-800 hover:bg-cyan-400 hover:text-slate-950 text-cyan-300 font-mono text-[11px] font-semibold transition-colors whitespace-nowrap cursor-pointer"
+                                className="px-2.5 py-1 rounded-md bg-zinc-900 border border-zinc-700 hover:bg-white hover:text-zinc-950 text-zinc-200 font-mono text-[11px] font-semibold transition-colors whitespace-nowrap cursor-pointer"
                               >
                                 В скрипт →
                               </button>
