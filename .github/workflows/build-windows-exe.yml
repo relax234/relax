@@ -4,6 +4,8 @@ on:
   push:
     branches: [main, master]
     tags: ['v*']
+  release:
+    types: [published]
   workflow_dispatch:
 
 permissions:
@@ -53,8 +55,9 @@ jobs:
         run: |
           node prepare-dist.mjs
           $ref = "${{ github.ref }}"
-          if ($ref -like "refs/tags/v*") {
-            Write-Host "Publishing release build..."
+          $eventName = "${{ github.event_name }}"
+          if ($ref -like "refs/tags/v*" -or $eventName -eq "release") {
+            Write-Host "Publishing release build to GitHub Releases..."
             npx electron-builder --win --x64 --config electron-builder.json --publish always
           } else {
             Write-Host "Local build (no publish)..."
