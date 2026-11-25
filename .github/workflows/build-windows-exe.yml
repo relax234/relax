@@ -23,11 +23,13 @@ jobs:
           node-version: 20
 
       - name: Install web dependencies & build bundle
+        shell: pwsh
         run: |
           npm install
           npm run build
 
       - name: Install Electron dependencies
+        shell: pwsh
         working-directory: electron
         run: npm install
 
@@ -50,9 +52,12 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           node prepare-dist.mjs
-          if ("${{ github.ref }}".StartsWith("refs/tags/v")) {
+          $ref = "${{ github.ref }}"
+          if ($ref -like "refs/tags/v*") {
+            Write-Host "Publishing release build..."
             npx electron-builder --win --x64 --config electron-builder.json --publish always
           } else {
+            Write-Host "Local build (no publish)..."
             npx electron-builder --win --x64 --config electron-builder.json --publish never
           }
 
